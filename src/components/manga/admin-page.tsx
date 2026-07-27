@@ -20,6 +20,8 @@ import {
   X,
   Pencil,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   Library,
   Star,
   LogOut,
@@ -463,6 +465,10 @@ function MangaForm({
       reader.readAsDataURL(file);
     });
 
+  // Process files SEQUENTIALLY so the upload order is strictly preserved.
+  // Promise.all can resolve reader callbacks out of order on some browsers,
+  // which would scramble the page sequence. A for-loop with await guarantees
+  // pages appear in the exact order the admin selected them.
   const handleImageUpload = async (
     chapterId: string,
     files: FileList | null
@@ -470,14 +476,17 @@ function MangaForm({
     if (!files || files.length === 0) return;
     try {
       const arr = Array.from(files);
-      const pages: ChapterPage[] = await Promise.all(
-        arr.map(async (f) => ({
-          id: `pg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: "image" as const,
-          src: await readFileAsDataURL(f),
+      const pages: ChapterPage[] = [];
+      for (let i = 0; i < arr.length; i++) {
+        const f = arr[i];
+        const src = await readFileAsDataURL(f);
+        pages.push({
+          id: `pg-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+          type: "image",
+          src,
           name: f.name,
-        }))
-      );
+        });
+      }
       setChapterPagesMap((m) => ({
         ...m,
         [chapterId]: [...(m[chapterId] ?? []), ...pages],
@@ -494,14 +503,17 @@ function MangaForm({
     if (!files || files.length === 0) return;
     try {
       const arr = Array.from(files);
-      const pages: ChapterPage[] = await Promise.all(
-        arr.map(async (f) => ({
-          id: `pg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: "pdf" as const,
-          src: await readFileAsDataURL(f),
+      const pages: ChapterPage[] = [];
+      for (let i = 0; i < arr.length; i++) {
+        const f = arr[i];
+        const src = await readFileAsDataURL(f);
+        pages.push({
+          id: `pg-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+          type: "pdf",
+          src,
           name: f.name,
-        }))
-      );
+        });
+      }
       setChapterPagesMap((m) => ({
         ...m,
         [chapterId]: [...(m[chapterId] ?? []), ...pages],
@@ -534,6 +546,24 @@ function MangaForm({
       ...m,
       [chapterId]: (m[chapterId] ?? []).filter((p) => p.id !== pageId),
     }));
+
+  // Move a page up or down within its chapter to fix the reading sequence.
+  const movePage = (
+    chapterId: string,
+    pageId: string,
+    direction: "up" | "down"
+  ) => {
+    setChapterPagesMap((m) => {
+      const list = m[chapterId] ?? [];
+      const idx = list.findIndex((p) => p.id === pageId);
+      if (idx === -1) return m;
+      const target = direction === "up" ? idx - 1 : idx + 1;
+      if (target < 0 || target >= list.length) return m;
+      const next = [...list];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return { ...m, [chapterId]: next };
+    });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -934,14 +964,35 @@ function MangaForm({
                           <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-medium text-white">
                             {idx + 1}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => removePage(ch.id, p.id)}
-                            className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-destructive text-white opacity-0 transition group-hover:opacity-100"
-                            aria-label={t.removePage}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                          {/* Reorder + remove controls (always visible on touch, hover on desktop) */}
+                          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-0.5 bg-black/60 px-1 py-0.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={() => movePage(ch.id, p.id, "up")}
+                              disabled={idx === 0}
+                              className="grid h-5 w-5 place-items-center rounded bg-white/20 text-white transition hover:bg-white/40 disabled:opacity-30"
+                              aria-label="Move up"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removePage(ch.id, p.id)}
+                              className="grid h-5 w-5 place-items-center rounded bg-destructive text-white transition hover:bg-destructive/80"
+                              aria-label={t.removePage}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => movePage(ch.id, p.id, "down")}
+                              disabled={idx === pages.length - 1}
+                              className="grid h-5 w-5 place-items-center rounded bg-white/20 text-white transition hover:bg-white/40 disabled:opacity-30"
+                              aria-label="Move down"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>

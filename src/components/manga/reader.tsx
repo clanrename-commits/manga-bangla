@@ -149,7 +149,7 @@ export function ReaderDialog() {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw] gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[95vh] sm:max-h-[95vh] sm:max-w-5xl sm:rounded-xl sm:border">
+      <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[95vh] sm:max-h-[95vh] sm:max-w-5xl sm:rounded-xl sm:border">
         <DialogTitle className="sr-only">
           {manga.title} — {t.chaptersList} {chapter.number}: {chapter.title}
         </DialogTitle>
@@ -266,10 +266,10 @@ export function ReaderDialog() {
         {/* Page view */}
         <div
           ref={scrollRef}
-          className="relative flex-1 overflow-y-auto bg-background"
+          className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-background"
         >
-          <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center px-2 py-4 sm:px-4">
-            <div className="relative w-full overflow-hidden rounded-md border border-border/60 shadow-lg">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center px-2 py-4 sm:px-4">
+            <div className="relative w-full max-w-full overflow-hidden rounded-md border border-border/60 shadow-lg">
               {isPdf ? (
                 <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
                   <FileText className="h-16 w-16 text-destructive" />
