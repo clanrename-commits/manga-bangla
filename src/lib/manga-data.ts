@@ -1,3 +1,5 @@
+import type { Lang } from "@/lib/i18n";
+
 export type MangaStatus = "Ongoing" | "Completed" | "Hiatus";
 
 export interface Chapter {
@@ -11,6 +13,7 @@ export interface Chapter {
 export interface Manga {
   id: string;
   title: string;
+  titleBn?: string;
   author: string;
   artist?: string;
   cover: string; // image URL
@@ -22,9 +25,11 @@ export interface Manga {
   genres: string[];
   tags: string[];
   synopsis: string;
+  synopsisBn?: string;
   chapters: Chapter[];
   featured?: boolean;
   trending?: boolean;
+  adminPosted?: boolean;
 }
 
 // Helper to build a stable, deterministic cover image URL.
@@ -271,6 +276,66 @@ export const MANGA_LIST: Manga[] = [
   },
 ];
 
+// Bangla translations for default catalog titles + brief synopsis.
+// Admin-posted manga carry their own Bangla fields.
+const BANGLA_TITLES: Record<string, string> = {
+  "shadow-blade-chronicles": "ছায়া ব্লেড ক্রনিকলস",
+  "neon-sakura": "নিয়ন সাকুরা",
+  "iron-fang-academy": "আয়রন ফ্যাং একাডেমি",
+  "the-last-librarian": "শেষ গ্রন্থাগারিক",
+  "starlight-pirates": "তারকার আলোর জলদস্যু",
+  "kitchen-of-souls": "আত্মার রান্নাঘর",
+  "iron-witch-of-the-east": "পূর্বের লৌহ ডাইনি",
+  "summer-of-the-fireflies": "জোনাকির গ্রীষ্ম",
+  "mechheart": "যান্ত্রিক হৃদয়",
+  "the-cartographer-of-dreams": "স্বপ্নের মানচিত্রকার",
+  "tideborn": "জোয়ারে জন্ম",
+  "the-glass-empire": "কাঁচের সাম্রাজ্য",
+};
+
+const BANGLA_SYNOPSIS: Record<string, string> = {
+  "shadow-blade-chronicles":
+    "একজন ভবঘুরে তরবারিধারী একটি অভিশপ্ত ফলা উত্তরাধিকার পান, যা তাকে ভুলে যাওয়া আত্মা ও সাম্রাজ্যের মধ্যে যুদ্ধে নিয়ে যায়। প্রতিটি অধ্যায়ে এক হাজার বছরের প্রাচীন চুক্তির নতুন স্তর উন্মোচিত হয়।",
+  "neon-sakura":
+    "২০৯৯ সালের নিয়নে ঢাকা টোকিওতে, একজন তরুণ মেকানিক অ্যান্ড্রয়েড মেরামত করেন। একটি রহস্যময় যুদ্ধ ইউনিট তাকে শহরের সর্বোচ্চ স্তর পর্যন্ত ষড়যন্ত্রের কেন্দ্রে নিয়ে যায়।",
+  "iron-fang-academy":
+    "উত্তর পর্বতের গভীরে, আয়রন ফ্যাং একাডেমি পরবর্তী প্রজন্মের ওয়্যারউলফ প্রহরীদের প্রশিক্ষণ দেয় — প্রতিদ্বন্দ্বী রক্তের উত্তরাধিকারীদের একসাথে থাকতে বাধ্য করে।",
+  "the-last-librarian":
+    "এমন এক রাজ্যে যে প্রতিটি বই পুড়িয়ে দিয়েছে, একজন গ্রন্থাগারিক গ্রামে গ্রামে নিষিদ্ধ বই ধার দেন। প্রতিটি অধ্যায়ে এক নতুন পাঠক এবং একটি গল্প যা তাদের জীবন বদলে দেয়।",
+  "starlight-pirates":
+    "স্টারলাইট রেনেগেডের ক্রু ছায়াপথের কর্পোরেশন থেকে চুরি করে উপনিবেশে দেয়। তাদের নতুন ডাকাতি একটি ভুলে যাওয়া উপনিবেশ জাহাজের মানচিত্র উন্মোচন করে।",
+  "kitchen-of-souls":
+    "একটি ছোট মধ্যরাতের ডিনার প্রতি গ্রাহককে শুধু একটি খাবার পরিবেশন করে — যে খাবারটি তাদের জীবনে সবচেয়ে বেশি গুরুত্বপূর্ণ ছিল। মৃতদের দেখতে পাওয়া এক শান্ত শেফের রান্নাঘর।",
+  "iron-witch-of-the-east":
+    "রাজার আদেশ অমান্য করে নির্বাসিত লৌহ ডাইনি ভাসিলিসা শরণার্থীদের নিয়ে একটি মুক্ত শহর গড়ে তোলেন। যখন রাজা তাকে শৃঙ্খলে আনতে সেনাবাহিনী পাঠান, তাকে শান্তি ও যুদ্ধের মধ্যে বেছে নিতে হয়।",
+  "summer-of-the-fireflies":
+    "দুই কিশোর-কিশোরী এমন এক শহরে একটি অসম্ভব গ্রীষ্ম কাটায় যেখানে জোনাকি পোকা রাত বারোটায় ধরলে একটি ইচ্ছা পূরণ করে বলে মনে করা হয়।",
+  "mechheart":
+    "ষোলো বছরের ইরি বিদ্রোহের সর্বকনিষ্ঠ মেক পাইলট, এবং একমাত্র যার মেক তাকে গান না গাইলে লড়াই করে না। সে সন্দেহ করতে শুরু করে যে মেকটি যন্ত্র নয়, বরং বন্দী এক ঈশ্বর।",
+  "the-cartographer-of-dreams":
+    "একজন জাল মানচিত্রকার যিনি শুধু স্বপ্নে দেখা স্থানের মানচিত্র আঁকতে পারেন, তাকে একজন চোরের সাথে একটি অসম্ভব ডাকাতির পরিকল্পনায় নিয়োগ দেওয়া হয়।",
+  "tideborn":
+    "ডুবে যাওয়া ঈশ্বরের চিহ্ন নিয়ে জন্ম নেওয়া একজন তরুণ নাবিক ফেনার ভাষায় লেখা পড়তে পারেন — কিন্তু প্রতিবার পড়ায় তিনি একটি স্মৃতি হারান।",
+  "the-glass-empire":
+    "এমন এক সাম্রাজ্যে যেখানে প্রতিটি অভিজাতের জীবন এমন এক আয়নায় লেখা যা মিথ্যা বলতে পারে না, কনিষ্ঠ রাজকন্যা আবিষ্কার করেন তার আয়না গত দশ বছর অন্য কারো জীবন দেখাচ্ছে।",
+};
+
+export function getMangaTitle(m: Manga, lang: Lang): string {
+  if (lang === "bn") {
+    if (m.titleBn) return m.titleBn;
+    return BANGLA_TITLES[m.id] ?? m.title;
+  }
+  return m.title;
+}
+
+export function getMangaSynopsis(m: Manga, lang: Lang): string {
+  if (lang === "bn") {
+    if (m.synopsisBn) return m.synopsisBn;
+    return BANGLA_SYNOPSIS[m.id] ?? m.synopsis;
+  }
+  return m.synopsis;
+}
+
 export const ALL_GENRES = Array.from(
   new Set(MANGA_LIST.flatMap((m) => m.genres))
 ).sort();
@@ -292,4 +357,16 @@ export function formatDate(iso: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+// Combine default catalog with admin-posted manga.
+export function getFullCatalog(adminManga: Manga[]): Manga[] {
+  return [...adminManga, ...MANGA_LIST];
+}
+
+// Get all genres including from admin-posted manga.
+export function getAllGenres(adminManga: Manga[]): string[] {
+  return Array.from(
+    new Set(getFullCatalog(adminManga).flatMap((m) => m.genres))
+  ).sort();
 }

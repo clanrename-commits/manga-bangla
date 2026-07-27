@@ -2,23 +2,31 @@
 
 import * as React from "react";
 import { SlidersHorizontal, X } from "lucide-react";
-import { ALL_GENRES } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { getAllGenres } from "@/lib/manga-data";
 
 export function GenreFilter() {
+  const t = useT();
   const selected = useMangaStore((s) => s.selectedGenres);
   const toggle = useMangaStore((s) => s.toggleGenre);
   const clear = useMangaStore((s) => s.clearGenres);
+  const adminManga = useMangaStore((s) => s.adminManga);
+
+  const genres = React.useMemo(
+    () => getAllGenres(adminManga),
+    [adminManga]
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <SlidersHorizontal className="h-4 w-4" />
-        <span className="hidden sm:inline">Filter:</span>
+        <span className="hidden sm:inline">{t.filter}:</span>
       </div>
-      {ALL_GENRES.map((g) => {
+      {genres.map((g) => {
         const active = selected.includes(g);
         return (
           <button
@@ -43,7 +51,7 @@ export function GenreFilter() {
           onClick={clear}
           className="h-7 gap-1 px-2 text-xs text-muted-foreground"
         >
-          <X className="h-3 w-3" /> Clear
+          <X className="h-3 w-3" /> {t.clear}
         </Button>
       )}
     </div>

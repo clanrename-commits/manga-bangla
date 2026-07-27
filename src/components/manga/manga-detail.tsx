@@ -23,29 +23,37 @@ import {
   Play,
   Check,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import {
-  MANGA_LIST,
+  getFullCatalog,
   formatViews,
   formatDate,
+  getMangaTitle,
+  getMangaSynopsis,
   type Manga,
   type Chapter,
 } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
-import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
 export function MangaDetailDialog() {
+  const t = useT();
   const openMangaId = useMangaStore((s) => s.openMangaId);
   const openManga = useMangaStore((s) => s.openManga);
   const openReader = useMangaStore((s) => s.openReader);
   const favorites = useMangaStore((s) => s.favorites);
   const toggleFavorite = useMangaStore((s) => s.toggleFavorite);
+  const adminManga = useMangaStore((s) => s.adminManga);
 
-  const manga = MANGA_LIST.find((m) => m.id === openMangaId) ?? null;
+  const catalog = React.useMemo(
+    () => getFullCatalog(adminManga),
+    [adminManga]
+  );
+  const manga = catalog.find((m) => m.id === openMangaId) ?? null;
   const open = Boolean(manga);
 
-  // Lock body scroll when open
   const onOpenChange = React.useCallback(
     (next: boolean) => {
       if (!next) openManga(null);
@@ -64,9 +72,7 @@ export function MangaDetailDialog() {
               const wasFav = favorites.includes(manga.id);
               toggleFavorite(manga.id);
               toast.success(
-                wasFav
-                  ? `Removed "${manga.title}" from favorites`
-                  : `Added "${manga.title}" to favorites`
+                wasFav ? t.removedFromFavorites : t.addedToFavorites
               );
             }}
             onReadChapter={(ch) => {
@@ -90,23 +96,34 @@ function DetailBody({
   onToggleFav: () => void;
   onReadChapter: (c: Chapter) => void;
 }) {
+  const t = useT();
+  const lang = useMangaStore((s) => s.lang);
   const firstChapter = manga.chapters[manga.chapters.length - 1];
   const latestChapter = manga.chapters[0];
+
+  const statusText =
+    manga.status === "Ongoing"
+      ? t.ongoing
+      : manga.status === "Completed"
+      ? t.completed
+      : t.hiatus;
 
   return (
     <>
       {/* Banner header */}
       <div className="relative h-44 w-full shrink-0 overflow-hidden sm:h-56">
         <img
-          src={manga.banner}
+          src={manga.banner ?? manga.cover}
           alt=""
           aria-hidden="true"
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         <DialogHeader className="sr-only">
-          <DialogTitle>{manga.title}</DialogTitle>
-          <DialogDescription>{manga.synopsis.slice(0, 140)}</DialogDescription>
+          <DialogTitle>{getMangaTitle(manga, lang)}</DialogTitle>
+          <DialogDescription>
+            {getMangaSynopsis(manga, lang).slice(0, 140)}
+          </DialogDescription>
         </DialogHeader>
       </div>
 
@@ -117,7 +134,7 @@ function DetailBody({
             <div className="overflow-hidden rounded-xl border border-border/60 shadow-xl">
               <img
                 src={manga.cover}
-                alt={`Cover of ${manga.title}`}
+                alt={getMangaTitle(manga, lang)}
                 className="aspect-[2/3] w-full object-cover"
               />
             </div>
@@ -126,7 +143,7 @@ function DetailBody({
                 className="gap-2"
                 onClick={() => firstChapter && onReadChapter(firstChapter)}
               >
-                <Play className="h-4 w-4" /> Read from start
+                <Play className="h-4 w-4" /> {t.readFromStart}
               </Button>
               <Button
                 variant={isFav ? "default" : "outline"}
@@ -136,11 +153,11 @@ function DetailBody({
               >
                 {isFav ? (
                   <>
-                    <Check className="h-4 w-4" /> Favorited
+                    <Check className="h-4 w-4" /> {t.favorited}
                   </>
                 ) : (
                   <>
-                    <Heart className="h-4 w-4" /> Add to favorites
+                    <Heart className="h-4 w-4" /> {t.addToFavorites}
                   </>
                 )}
               </Button>
@@ -152,15 +169,20 @@ function DetailBody({
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="bg-primary text-primary-foreground">
-                  {manga.status}
+                  {statusText}
                 </Badge>
                 <Badge variant="outline">{manga.year}</Badge>
                 {manga.trending && (
-                  <Badge variant="secondary">Trending</Badge>
+                  <Badge variant="secondary">{t.trendingBadge}</Badge>
+                )}
+                {manga.adminPosted && (
+                  <Badge variant="outline" className="gap-1 border-primary/50 text-primary">
+                    <Sparkles className="h-3 w-3" /> New
+                  </Badge>
                 )}
               </div>
-              <h2 className="text-balance text-2xl font-extrabold tracking-tight sm:text-3xl">
-                {manga.title}
+              <h2 className="text-balance text-2xl font-extrabold tracking-tight sm:text-3xl" dir="auto">
+                {getMangaTitle(manga, lang)}
               </h2>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
@@ -182,10 +204,10 @@ function DetailBody({
                   <span className="text-muted-foreground">/ 10</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                  <Eye className="h-4 w-4" /> {formatViews(manga.views)} reads
+                  <Eye className="h-4 w-4" /> {formatViews(manga.views)} {t.reads}
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                  <BookOpen className="h-4 w-4" /> {manga.chapters.length} chapters
+                  <BookOpen className="h-4 w-4" /> {manga.chapters.length} {t.chapters}
                 </span>
               </div>
             </div>
@@ -196,9 +218,9 @@ function DetailBody({
                   {g}
                 </Badge>
               ))}
-              {manga.tags.map((t) => (
-                <Badge key={t} variant="outline" className="text-muted-foreground">
-                  #{t}
+              {manga.tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-muted-foreground">
+                  #{tag}
                 </Badge>
               ))}
             </div>
@@ -207,10 +229,10 @@ function DetailBody({
 
             <div>
               <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Synopsis
+                {t.synopsis}
               </h3>
-              <p className="text-sm leading-relaxed text-foreground/90 sm:text-base">
-                {manga.synopsis}
+              <p className="text-sm leading-relaxed text-foreground/90 sm:text-base" dir="auto">
+                {getMangaSynopsis(manga, lang)}
               </p>
             </div>
 
@@ -219,7 +241,7 @@ function DetailBody({
             <div>
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Chapters ({manga.chapters.length})
+                  {t.chaptersList} ({manga.chapters.length})
                 </h3>
                 {latestChapter && (
                   <Button
@@ -228,7 +250,7 @@ function DetailBody({
                     className="gap-1.5 text-primary"
                     onClick={() => onReadChapter(latestChapter)}
                   >
-                    <Play className="h-3.5 w-3.5" /> Read latest
+                    <Play className="h-3.5 w-3.5" /> {t.readLatest}
                   </Button>
                 )}
               </div>
@@ -237,10 +259,7 @@ function DetailBody({
                   <li key={c.id}>
                     <button
                       onClick={() => onReadChapter(c)}
-                      className={cn(
-                        "group flex w-full items-center gap-3 rounded-lg border border-border/50 bg-card/40 px-3 py-2 text-left transition",
-                        "hover:border-primary/50 hover:bg-accent"
-                      )}
+                      className="group flex w-full items-center gap-3 rounded-lg border border-border/50 bg-card/40 px-3 py-2 text-left transition hover:border-primary/50 hover:bg-accent"
                     >
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-sm font-bold text-primary">
                         {c.number}
@@ -253,7 +272,7 @@ function DetailBody({
                           <Clock className="h-3 w-3" />
                           {formatDate(c.releasedAt)}
                           <span aria-hidden>·</span>
-                          {c.pages} pages
+                          {c.pages} {t.pages}
                         </span>
                       </span>
                       <Play className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />

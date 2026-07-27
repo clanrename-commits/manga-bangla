@@ -2,15 +2,16 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Star, Eye, Heart, BookOpen } from "lucide-react";
+import { Star, Eye, Heart, BookOpen, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MANGA_LIST,
   formatViews,
+  getMangaTitle,
   type Manga,
 } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface MangaCardProps {
@@ -19,6 +20,8 @@ interface MangaCardProps {
 }
 
 export function MangaCard({ manga, index = 0 }: MangaCardProps) {
+  const t = useT();
+  const lang = useMangaStore((s) => s.lang);
   const openManga = useMangaStore((s) => s.openManga);
   const openReader = useMangaStore((s) => s.openReader);
   const favorites = useMangaStore((s) => s.favorites);
@@ -38,11 +41,11 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
       <button
         onClick={() => openManga(manga.id)}
         className="relative block aspect-[2/3] w-full overflow-hidden"
-        aria-label={`View details for ${manga.title}`}
+        aria-label={getMangaTitle(manga, lang)}
       >
         <img
           src={manga.cover}
-          alt={`Cover of ${manga.title}`}
+          alt={getMangaTitle(manga, lang)}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -52,7 +55,12 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
           {manga.trending && (
             <Badge className="bg-primary/90 text-primary-foreground backdrop-blur-sm">
-              Trending
+              {t.trendingBadge}
+            </Badge>
+          )}
+          {manga.adminPosted && (
+            <Badge className="bg-amber-500/90 text-white backdrop-blur-sm">
+              <Sparkles className="mr-0.5 h-2.5 w-2.5" /> New
             </Badge>
           )}
         </div>
@@ -63,7 +71,7 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
             e.stopPropagation();
             toggleFavorite(manga.id);
           }}
-          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+          aria-label={isFav ? t.removedFromFavorites : t.addToFavorites}
           aria-pressed={isFav}
           className={cn(
             "absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full backdrop-blur-sm transition",
@@ -87,8 +95,8 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
               {formatViews(manga.views)}
             </span>
           </div>
-          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-balance">
-            {manga.title}
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-balance" dir="auto">
+            {getMangaTitle(manga, lang)}
           </h3>
         </div>
       </button>
@@ -115,7 +123,7 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
             disabled={!latest}
           >
             <BookOpen className="h-3.5 w-3.5" />
-            Read
+            {t.read}
           </Button>
           <Button
             size="sm"
@@ -123,7 +131,7 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
             className="h-8"
             onClick={() => openManga(manga.id)}
           >
-            Details
+            {t.details}
           </Button>
         </div>
       </div>
@@ -142,5 +150,3 @@ export function MangaCardSkeleton() {
     </div>
   );
 }
-
-export { MANGA_LIST };

@@ -2,37 +2,60 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Star, Eye, Play, Plus, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, Eye, Play, Plus, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MANGA_LIST, formatViews, type Manga } from "@/lib/manga-data";
+import {
+  MANGA_LIST,
+  formatViews,
+  getMangaTitle,
+  getMangaSynopsis,
+  type Manga,
+} from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
-const FEATURED = MANGA_LIST.filter((m) => m.featured).slice(0, 4);
 
 export function Hero() {
   const [index, setIndex] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
+  const t = useT();
+  const lang = useMangaStore((s) => s.lang);
+  const adminManga = useMangaStore((s) => s.adminManga);
   const openManga = useMangaStore((s) => s.openManga);
   const openReader = useMangaStore((s) => s.openReader);
 
+  const fullCatalog = React.useMemo(
+    () => [...adminManga, ...MANGA_LIST],
+    [adminManga]
+  );
+  const featured = React.useMemo(
+    () => fullCatalog.filter((m) => m.featured).slice(0, 4),
+    [fullCatalog]
+  );
+
   const next = React.useCallback(
-    () => setIndex((i) => (i + 1) % FEATURED.length),
-    []
+    () => setIndex((i) => (i + 1) % Math.max(featured.length, 1)),
+    [featured.length]
   );
   const prev = React.useCallback(
-    () => setIndex((i) => (i - 1 + FEATURED.length) % FEATURED.length),
-    []
+    () => setIndex((i) => (i - 1 + featured.length) % Math.max(featured.length, 1)),
+    [featured.length]
   );
 
   React.useEffect(() => {
-    if (paused) return;
-    const t = setInterval(next, 6000);
-    return () => clearInterval(t);
-  }, [next, paused]);
+    if (paused || featured.length === 0) return;
+    const timer = setInterval(next, 6000);
+    return () => clearInterval(timer);
+  }, [next, paused, featured.length]);
 
-  const manga = FEATURED[index];
+  // Reset index if out of range
+  React.useEffect(() => {
+    if (index >= featured.length) setIndex(0);
+  }, [featured.length, index]);
+
+  if (featured.length === 0) return null;
+  const manga = featured[index] ?? featured[0];
   if (!manga) return null;
 
   return (
@@ -54,7 +77,7 @@ export function Hero() {
           {/* Banner */}
           <div className="absolute inset-0">
             <img
-              src={manga.banner}
+              src={manga.banner ?? manga.cover}
               alt=""
               aria-hidden="true"
               className="h-full w-full object-cover"
@@ -70,7 +93,7 @@ export function Hero() {
               <div className="overflow-hidden rounded-xl border border-border/60 shadow-2xl">
                 <img
                   src={manga.cover}
-                  alt={`Cover of ${manga.title}`}
+                  alt={getMangaTitle(manga, lang)}
                   className="h-72 w-48 object-cover"
                 />
               </div>
@@ -79,24 +102,35 @@ export function Hero() {
             <div className="max-w-2xl space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="gap-1 bg-primary text-primary-foreground">
-                  <Star className="h-3 w-3 fill-current" /> Featured
+                  <Star className="h-3 w-3 fill-current" /> {t.featured}
                 </Badge>
-                <Badge variant="secondary">{manga.status}</Badge>
+                <Badge variant="secondary">
+                  {manga.status === "Ongoing"
+                    ? t.ongoing
+                    : manga.status === "Completed"
+                    ? t.completed
+                    : t.hiatus}
+                </Badge>
                 <Badge variant="outline">{manga.year}</Badge>
+                {manga.adminPosted && (
+                  <Badge variant="outline" className="gap-1 border-primary/50 text-primary">
+                    <Sparkles className="h-3 w-3" /> New
+                  </Badge>
+                )}
               </div>
               <h1 className="text-balance text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                {manga.title}
+                {getMangaTitle(manga, lang)}
               </h1>
               <p className="text-sm text-muted-foreground">
-                by <span className="text-foreground/90">{manga.author}</span>
+                {t.by} <span className="text-foreground/90">{manga.author}</span>
                 {manga.artist && manga.artist !== manga.author && (
                   <>
-                    {" "}· art by <span className="text-foreground/90">{manga.artist}</span>
+                    {" "}· {t.artBy} <span className="text-foreground/90">{manga.artist}</span>
                   </>
                 )}
               </p>
               <p className="line-clamp-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-                {manga.synopsis}
+                {getMangaSynopsis(manga, lang)}
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <div className="flex items-center gap-1.5 text-sm">
@@ -106,10 +140,10 @@ export function Hero() {
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Eye className="h-4 w-4" />
-                  {formatViews(manga.views)} reads
+                  {formatViews(manga.views)} {t.reads}
                 </div>
                 <div className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
-                  · {manga.chapters.length} chapters
+                  · {manga.chapters.length} {t.chapters}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -121,14 +155,14 @@ export function Hero() {
                     if (first) openReader(manga.id, first.id);
                   }}
                 >
-                  <Play className="h-4 w-4" /> Read first chapter
+                  <Play className="h-4 w-4" /> {t.readFirstChapter}
                 </Button>
                 <Button
                   size="lg"
                   variant="secondary"
                   onClick={() => openManga(manga.id)}
                 >
-                  View details
+                  {t.viewDetails}
                 </Button>
                 <FavoriteButton manga={manga} />
               </div>
@@ -138,42 +172,46 @@ export function Hero() {
       </AnimatePresence>
 
       {/* Controls */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-between px-2 sm:px-4">
-        <button
-          onClick={prev}
-          aria-label="Previous featured manga"
-          className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-background/70 backdrop-blur-sm transition hover:bg-background"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <button
-          onClick={next}
-          aria-label="Next featured manga"
-          className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-background/70 backdrop-blur-sm transition hover:bg-background"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
+      {featured.length > 1 && (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-between px-2 sm:px-4">
+            <button
+              onClick={prev}
+              aria-label={t.prev}
+              className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-background/70 backdrop-blur-sm transition hover:bg-background"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={next}
+              aria-label={t.next}
+              className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-background/70 backdrop-blur-sm transition hover:bg-background"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
 
-      {/* Indicators */}
-      <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
-        {FEATURED.map((m, i) => (
-          <button
-            key={m.id}
-            onClick={() => setIndex(i)}
-            aria-label={`Go to slide ${i + 1}`}
-            className={cn(
-              "h-1.5 rounded-full bg-foreground/30 transition-all",
-              i === index ? "w-8 bg-primary" : "w-2 hover:bg-foreground/60"
-            )}
-          />
-        ))}
-      </div>
+          <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
+            {featured.map((m, i) => (
+              <button
+                key={m.id}
+                onClick={() => setIndex(i)}
+                aria-label={`${i + 1}`}
+                className={cn(
+                  "h-1.5 rounded-full bg-foreground/30 transition-all",
+                  i === index ? "w-8 bg-primary" : "w-2 hover:bg-foreground/60"
+                )}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
 
 function FavoriteButton({ manga }: { manga: Manga }) {
+  const t = useT();
   const favorites = useMangaStore((s) => s.favorites);
   const toggle = useMangaStore((s) => s.toggleFavorite);
   const isFav = favorites.includes(manga.id);
@@ -187,11 +225,11 @@ function FavoriteButton({ manga }: { manga: Manga }) {
     >
       {isFav ? (
         <>
-          <Check className="h-4 w-4" /> Favorited
+          <Check className="h-4 w-4" /> {t.favorited}
         </>
       ) : (
         <>
-          <Plus className="h-4 w-4" /> Add to favorites
+          <Plus className="h-4 w-4" /> {t.addToFavorites}
         </>
       )}
     </Button>

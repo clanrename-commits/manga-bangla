@@ -16,11 +16,9 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import {
-  MANGA_LIST,
-  type Chapter,
-} from "@/lib/manga-data";
+import { getFullCatalog, formatDate } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -30,21 +28,26 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDate } from "@/lib/manga-data";
 import { toast } from "sonner";
 
 // Generate deterministic placeholder "pages" so the reader looks like a real one.
-// Each page is a tinted panel with the chapter / page number burned in.
 function pageImage(mangaId: string, chapterId: string, page: number) {
   return `https://picsum.photos/seed/${mangaId}-${chapterId}-p${page}/900/1300`;
 }
 
 export function ReaderDialog() {
+  const t = useT();
   const readerMangaId = useMangaStore((s) => s.readerMangaId);
   const readerChapterId = useMangaStore((s) => s.readerChapterId);
   const openReader = useMangaStore((s) => s.openReader);
+  const adminManga = useMangaStore((s) => s.adminManga);
 
-  const manga = MANGA_LIST.find((m) => m.id === readerMangaId) ?? null;
+  const catalog = React.useMemo(
+    () => getFullCatalog(adminManga),
+    [adminManga]
+  );
+
+  const manga = catalog.find((m) => m.id === readerMangaId) ?? null;
   const chapter =
     manga?.chapters.find((c) => c.id === readerChapterId) ?? null;
 
@@ -57,7 +60,6 @@ export function ReaderDialog() {
   const chapterIndex = manga && chapter
     ? manga.chapters.findIndex((c) => c.id === chapter.id)
     : -1;
-  // manga.chapters is sorted newest first; "next" chapter is the older one (index+1)
   const nextChapter =
     chapterIndex >= 0 && chapterIndex < (manga?.chapters.length ?? 0) - 1
       ? manga!.chapters[chapterIndex + 1]
@@ -68,7 +70,7 @@ export function ReaderDialog() {
     setPage((p) => {
       if (p + 1 >= totalPages) {
         if (nextChapter && manga) {
-          toast.success(`Moving to ${nextChapter.title}`);
+          toast.success(`${t.nextChapter}: ${nextChapter.title}`);
           openReader(manga.id, nextChapter.id);
         }
         return p;
@@ -82,7 +84,7 @@ export function ReaderDialog() {
     setPage((p) => {
       if (p === 0) {
         if (prevChapter && manga) {
-          toast.info(`Going back to ${prevChapter.title}`);
+          toast.info(`${t.prev}: ${prevChapter.title}`);
           openReader(manga.id, prevChapter.id);
         }
         return p;
@@ -130,10 +132,10 @@ export function ReaderDialog() {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw] gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[95vh] sm:max-h-[95vh] sm:max-w-5xl sm:rounded-xl sm:border">
         <DialogTitle className="sr-only">
-          {manga.title} — Chapter {chapter.number}: {chapter.title}
+          {manga.title} — {t.chaptersList} {chapter.number}: {chapter.title}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Reading page {page + 1} of {totalPages}.
+          {t.page} {page + 1} {t.of} {totalPages}.
         </DialogDescription>
 
         {/* Reader toolbar */}
@@ -142,14 +144,18 @@ export function ReaderDialog() {
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            aria-label="Close reader"
+            aria-label={t.closeReader}
           >
             <X className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{manga.title}</p>
+            <p className="truncate text-sm font-semibold" dir="auto">
+              {manga.titleBn && useMangaStore.getState().lang === "bn"
+                ? manga.titleBn
+                : manga.title}
+            </p>
             <p className="truncate text-xs text-muted-foreground">
-              Ch. {chapter.number} — {chapter.title}
+              {t.chaptersList} {chapter.number} — {chapter.title}
             </p>
           </div>
 
@@ -160,19 +166,19 @@ export function ReaderDialog() {
               size="icon"
               onClick={prevPage}
               disabled={page === 0 && !prevChapter}
-              aria-label="Previous page"
+              aria-label={t.prevPage}
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <span className="min-w-[5.5rem] text-center text-xs font-medium text-muted-foreground tabular-nums">
-              {page + 1} / {totalPages}
+              {page + 1} {t.of} {totalPages}
             </span>
             <Button
               variant="ghost"
               size="icon"
               onClick={nextPage}
               disabled={page + 1 >= totalPages && !nextChapter}
-              aria-label="Next page"
+              aria-label={t.nextPage}
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
@@ -181,15 +187,15 @@ export function ReaderDialog() {
           {/* Chapter list */}
           <Sheet open={chaptersOpen} onOpenChange={setChaptersOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Chapters">
+              <Button variant="ghost" size="icon" aria-label={t.chaptersList}>
                 <List className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80 sm:w-96">
               <SheetHeader>
-                <SheetTitle>{manga.title}</SheetTitle>
+                <SheetTitle>{t.chaptersList}</SheetTitle>
                 <p className="text-sm text-muted-foreground">
-                  {manga.chapters.length} chapters
+                  {manga.chapters.length} {t.chapters}
                 </p>
               </SheetHeader>
               <ScrollArea className="scrollbar-manga mt-4 h-[calc(100vh-7rem)] pr-2">
@@ -225,7 +231,7 @@ export function ReaderDialog() {
                               {c.title}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {formatDate(c.releasedAt)} · {c.pages}p
+                              {formatDate(c.releasedAt)} · {c.pages} {t.pages}
                             </span>
                           </span>
                         </button>
@@ -248,17 +254,17 @@ export function ReaderDialog() {
               <img
                 key={`${chapter.id}-${page}`}
                 src={pageImage(manga.id, chapter.id, page)}
-                alt={`Page ${page + 1} of chapter ${chapter.number}`}
+                alt={`${t.page} ${page + 1} ${t.of} ${t.chaptersList} ${chapter.number}`}
                 className="block h-auto w-full"
                 loading="eager"
               />
               {/* Page watermark */}
               <div className="pointer-events-none absolute right-3 top-3 rounded bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
-                {manga.title} · Ch.{chapter.number} · P.{page + 1}
+                {manga.title} · {t.chaptersList}.{chapter.number} · {t.page}.{page + 1}
               </div>
             </div>
 
-            {/* Tap zones for mobile */}
+            {/* Bottom controls */}
             <div className="mt-4 flex w-full items-center justify-between gap-3 pb-6">
               <Button
                 variant="outline"
@@ -266,25 +272,27 @@ export function ReaderDialog() {
                 disabled={page === 0 && !prevChapter}
                 className="gap-2"
               >
-                <ChevronLeft className="h-4 w-4" /> Prev
+                <ChevronLeft className="h-4 w-4" /> {t.prev}
               </Button>
               <span className="text-xs text-muted-foreground">
-                Use ← / → to navigate
+                {t.useArrows}
               </span>
               <Button
                 onClick={nextPage}
                 disabled={page + 1 >= totalPages && !nextChapter}
                 className="gap-2"
               >
-                Next <ChevronRight className="h-4 w-4" />
+                {t.next} <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
 
             {page + 1 >= totalPages && (
               <div className="mb-6 w-full max-w-2xl rounded-xl border border-border/60 bg-card p-5 text-center">
-                <h3 className="text-lg font-bold">End of Chapter {chapter.number}</h3>
+                <h3 className="text-lg font-bold">
+                  {t.endOfChapter} {chapter.number}
+                </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  You finished <span className="text-foreground">{chapter.title}</span>.
+                  {t.endOfChapterDesc(chapter.title)}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   {nextChapter ? (
@@ -292,12 +300,12 @@ export function ReaderDialog() {
                       onClick={() => openReader(manga.id, nextChapter.id)}
                       className="gap-2"
                     >
-                      Next chapter: {nextChapter.title}{" "}
+                      {t.nextChapter}: {nextChapter.title}{" "}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      You&apos;ve reached the latest chapter. Check back soon!
+                      {t.reachedLatest}
                     </p>
                   )}
                   <Button
@@ -305,7 +313,7 @@ export function ReaderDialog() {
                     onClick={() => onOpenChange(false)}
                     className="gap-2"
                   >
-                    Close reader
+                    {t.closeReaderBtn}
                   </Button>
                 </div>
               </div>
@@ -325,7 +333,7 @@ export function ReaderDialog() {
                     behavior: "smooth",
                   })
                 }
-                aria-label="Scroll up"
+                aria-label={t.scrollUp}
               >
                 <ChevronUp className="h-5 w-5" />
               </Button>
@@ -339,7 +347,7 @@ export function ReaderDialog() {
                     behavior: "smooth",
                   })
                 }
-                aria-label="Scroll down"
+                aria-label={t.scrollDown}
               >
                 <ChevronDown className="h-5 w-5" />
               </Button>

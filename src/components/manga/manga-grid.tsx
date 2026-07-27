@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { SearchX, HeartCrack, Flame } from "lucide-react";
+import { SearchX, HeartCrack, Flame, Sparkles } from "lucide-react";
 import {
-  MANGA_LIST,
+  getFullCatalog,
+  getMangaTitle,
   type Manga,
 } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
+import { useT } from "@/lib/i18n";
 import { MangaCard } from "./manga-card";
 import { GenreFilter } from "./genre-filter";
 import { Hero } from "./hero";
@@ -27,11 +29,13 @@ function filterManga(opts: {
     if (!q) return true;
     const hay = [
       m.title,
+      m.titleBn ?? "",
       m.author,
       m.artist ?? "",
       m.genres.join(" "),
       m.tags.join(" "),
       m.synopsis,
+      m.synopsisBn ?? "",
     ]
       .join(" ")
       .toLowerCase();
@@ -40,30 +44,37 @@ function filterManga(opts: {
 }
 
 export function MangaExplorer() {
+  const t = useT();
+  const lang = useMangaStore((s) => s.lang);
   const view = useMangaStore((s) => s.view);
   const search = useMangaStore((s) => s.search);
   const selectedGenres = useMangaStore((s) => s.selectedGenres);
   const favorites = useMangaStore((s) => s.favorites);
+  const adminManga = useMangaStore((s) => s.adminManga);
   const setView = useMangaStore((s) => s.setView);
 
   const showHero = view === "browse" && !search && selectedGenres.length === 0;
 
-  let scope = MANGA_LIST;
-  let title = "Browse Manga";
-  let subtitle =
-    "Discover hundreds of titles across every genre. Pick a favorite and start reading in seconds.";
+  const fullCatalog = React.useMemo(
+    () => getFullCatalog(adminManga),
+    [adminManga]
+  );
+
+  let scope = fullCatalog;
+  let title = t.browseManga;
+  let subtitle = t.browseSubtitle;
 
   if (view === "favorites") {
-    scope = MANGA_LIST.filter((m) => favorites.includes(m.id));
-    title = "Your Favorites";
+    scope = fullCatalog.filter((m) => favorites.includes(m.id));
+    title = t.yourFavorites;
     subtitle =
       favorites.length === 0
-        ? "Tap the heart on any manga to save it here for later."
-        : `${scope.length} saved title${scope.length === 1 ? "" : "s"}.`;
+        ? t.favoritesEmpty
+        : t.favoritesCount(scope.length);
   } else if (view === "trending") {
-    scope = MANGA_LIST.filter((m) => m.trending);
-    title = "Trending Now";
-    subtitle = "What everyone is reading this week.";
+    scope = fullCatalog.filter((m) => m.trending);
+    title = t.trendingNow;
+    subtitle = t.trendingSubtitle;
   }
 
   const results = filterManga({
@@ -75,6 +86,39 @@ export function MangaExplorer() {
   return (
     <div className="flex flex-col gap-8 pb-12">
       {showHero && <Hero />}
+
+      {/* "First Manga in Bangla" prominent banner */}
+      {showHero && (
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent p-5 sm:p-6">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg">
+                  <Sparkles className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-lg font-extrabold tracking-tight sm:text-xl">
+                    {lang === "bn" ? "প্রথম বাংলা মাঙ্গা" : "First Manga in Bangla"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {lang === "bn"
+                      ? "বাংলা ভাষায় প্রথম মাঙ্গা পড়ার প্ল্যাটফর্ম।"
+                      : "The first-ever manga reading platform in Bangla."}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                onClick={() => setView("browse")}
+              >
+                {t.browse}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
@@ -90,7 +134,7 @@ export function MangaExplorer() {
               <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
             </div>
             <p className="text-sm text-muted-foreground">
-              {results.length} result{results.length === 1 ? "" : "s"}
+              {t.results(results.length)}
             </p>
           </div>
 
@@ -131,6 +175,7 @@ function EmptyState({
   hasFavorites: boolean;
   onBrowse: () => void;
 }) {
+  const t = useT();
   const isFavoritesEmpty = view === "favorites" && !hasFavorites;
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
@@ -142,17 +187,13 @@ function EmptyState({
         )}
       </div>
       <h3 className="text-lg font-semibold">
-        {isFavoritesEmpty
-          ? "No favorites yet"
-          : "No manga match your search"}
+        {isFavoritesEmpty ? t.noFavorites : t.noResults}
       </h3>
       <p className="max-w-md text-sm text-muted-foreground">
-        {isFavoritesEmpty
-          ? "Browse the catalog and tap the heart on any cover to save it here."
-          : "Try a different title, author, or clear some filters."}
+        {isFavoritesEmpty ? t.noFavoritesDesc : t.noResultsDesc}
       </p>
       <Button onClick={onBrowse} className="mt-2">
-        Browse the catalog
+        {t.browseCatalog}
       </Button>
     </div>
   );

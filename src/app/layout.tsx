@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -15,19 +15,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const notoBengali = Noto_Sans_Bengali({
+  variable: "--font-bengali",
+  subsets: ["bengali"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Mangaverse — Read Manga Online",
+  title: "Manga Bangla — First Manga in Bangla",
   description:
-    "Discover, read, and collect your favorite manga. A modern manga reader with a curated catalog, dark mode, and a built-in chapter reader.",
+    "Manga Bangla — প্রথম বাংলা মাঙ্গা প্ল্যাটফর্ম। Discover, read, and collect your favorite manga in Bangla and English. A modern reader with a curated catalog and built-in chapter reader.",
   keywords: [
+    "manga bangla",
+    "bangla manga",
     "manga",
-    "reader",
+    "bengali manga",
+    "মাঙ্গা বাংলা",
     "online manga",
-    "manga catalog",
-    "web reader",
+    "manga reader",
     "comics",
   ],
-  authors: [{ name: "Mangaverse" }],
+  authors: [{ name: "Abdur Rahman Akash" }],
 };
 
 export default function RootLayout({
@@ -36,9 +45,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="bn" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} ${notoBengali.variable} antialiased bg-background text-foreground`}
+        style={{ fontFamily: "var(--font-geist-sans), var(--font-bengali), sans-serif" }}
       >
         <ThemeProvider
           attribute="class"
