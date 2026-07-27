@@ -4,14 +4,14 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Lang } from "@/lib/i18n";
 import type { Manga, ChapterPage } from "@/lib/manga-data";
+import { indexedDBStorage } from "@/lib/indexed-db-storage";
 
 export type View = "browse" | "favorites" | "trending";
 export type AuthDialog =
   | "none"
   | "login"
   | "register"
-  | "adminLogin"
-  | "adminPanel";
+  | "adminLogin";
 
 export interface User {
   id: string;
@@ -225,8 +225,8 @@ export const useMangaStore = create<MangaState>()(
       setDefaultCopyright: (c) => set({ defaultCopyright: c }),
     }),
     {
-      name: "manga-bangla-store-v2",
-      storage: createJSONStorage(() => localStorage),
+      name: "manga-bangla-store-v3",
+      storage: createJSONStorage(() => indexedDBStorage),
       partialize: (s) => ({
         favorites: s.favorites,
         lang: s.lang,

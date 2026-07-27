@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 import {
   useMangaStore,
   type View,
@@ -53,6 +54,7 @@ const NAV: { id: View; labelKey: "browse" | "trending" | "favorites"; icon: Reac
 
 export function Header() {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
   const t = useT();
   const lang = useMangaStore((s) => s.lang);
@@ -75,6 +77,15 @@ export function Header() {
   const handleLogout = () => {
     logout();
     toast.success(t.logoutSuccess);
+  };
+
+  const goAdmin = () => {
+    setMobileOpen(false);
+    if (isAdmin) {
+      router.push("/admin");
+    } else {
+      setAuthDialog("adminLogin");
+    }
   };
 
   return (
@@ -220,7 +231,7 @@ export function Header() {
                   variant="default"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => setAuthDialog("adminPanel")}
+                  onClick={goAdmin}
                 >
                   <LayoutDashboard className="h-4 w-4" />
                   {t.adminPanel}
@@ -247,7 +258,7 @@ export function Header() {
                   <DropdownMenuSeparator />
                   {isAdmin && (
                     <DropdownMenuItem
-                      onClick={() => setAuthDialog("adminPanel")}
+                      onClick={goAdmin}
                       className="gap-2"
                     >
                       <LayoutDashboard className="h-4 w-4" />
@@ -367,7 +378,7 @@ export function Header() {
                       <SheetClose asChild>
                         <Button
                           variant="default"
-                          onClick={() => setAuthDialog("adminPanel")}
+                          onClick={goAdmin}
                           className="justify-start gap-2"
                         >
                           <LayoutDashboard className="h-4 w-4" />

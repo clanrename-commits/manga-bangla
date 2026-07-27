@@ -23,6 +23,7 @@ import {
 import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 
 export function AuthDialogs() {
@@ -256,6 +257,7 @@ function AdminLoginDialog({
   const t = useT();
   const login = useMangaStore((s) => s.login);
   const setDialog = useMangaStore((s) => s.setAuthDialog);
+  const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
@@ -275,6 +277,7 @@ function AdminLoginDialog({
       setEmail("");
       setPassword("");
       onClose();
+      router.push("/admin");
     } else {
       setError(res.error === "invalidCredentials" ? t.invalidCredentials : res.error ?? "");
     }

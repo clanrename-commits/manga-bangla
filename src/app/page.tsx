@@ -6,7 +6,6 @@ import { MangaExplorer } from "@/components/manga/manga-grid";
 import { MangaDetailDialog } from "@/components/manga/manga-detail";
 import { ReaderDialog } from "@/components/manga/reader";
 import { AuthDialogs } from "@/components/manga/auth-dialogs";
-import { AdminPanel } from "@/components/manga/admin-panel";
 
 export default function Home() {
   return (
@@ -18,7 +17,6 @@ export default function Home() {
       <MangaDetailDialog />
       <ReaderDialog />
       <AuthDialogs />
-      <AdminPanel />
     </div>
   );
 }
