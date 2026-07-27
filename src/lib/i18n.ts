@@ -141,6 +141,52 @@ type Dict = {
   language: string;
   menu: string;
   close: string;
+  // Admin sidebar
+  dashboard: string;
+  mangaManagement: string;
+  categoriesManagement: string;
+  genresManagement: string;
+  totalManga: string;
+  totalCategories: string;
+  totalGenres: string;
+  totalFavorites: string;
+  adminDashboard: string;
+  // Manga management
+  addNewManga: string;
+  editManga: string;
+  edit: string;
+  mangaList: string;
+  coverPhoto: string;
+  bannerPhoto: string;
+  copyrightLabel: string;
+  categoriesLabel: string;
+  chapterPages: string;
+  uploadImages: string;
+  uploadPdf: string;
+  uploadPagesHint: string;
+  imageMode: string;
+  pdfMode: string;
+  pageOf: (cur: number, total: number) => string;
+  removePage: string;
+  noPagesUploaded: string;
+  saveManga: string;
+  updateMangaBtn: string;
+  cancel: string;
+  // Categories
+  addCategory: string;
+  categoryName: string;
+  noCategories: string;
+  // Genres
+  addGenre: string;
+  genreName: string;
+  noGenres: string;
+  // Settings
+  siteNameLabel: string;
+  defaultCopyrightLabel: string;
+  // Reader PDF
+  openPdf: string;
+  pdfViewer: string;
+  pdfPage: string;
 };
 
 export const translations: Record<Lang, Dict> = {
@@ -270,6 +316,52 @@ export const translations: Record<Lang, Dict> = {
     language: "Language",
     menu: "Menu",
     close: "Close",
+    // Admin sidebar
+    dashboard: "Dashboard",
+    mangaManagement: "Manga",
+    categoriesManagement: "Categories",
+    genresManagement: "Genres",
+    totalManga: "Total Manga",
+    totalCategories: "Categories",
+    totalGenres: "Genres",
+    totalFavorites: "Favorites",
+    adminDashboard: "Admin Dashboard",
+    // Manga management
+    addNewManga: "Add New Manga",
+    editManga: "Edit Manga",
+    edit: "Edit",
+    mangaList: "Manga List",
+    coverPhoto: "Cover Photo",
+    bannerPhoto: "Banner Photo",
+    copyrightLabel: "Copyrights",
+    categoriesLabel: "Categories",
+    chapterPages: "Chapter Pages",
+    uploadImages: "Upload Images",
+    uploadPdf: "Upload PDF",
+    uploadPagesHint: "Upload images or a PDF for this chapter. They will be shown to readers in order.",
+    imageMode: "Image mode",
+    pdfMode: "PDF mode",
+    pageOf: (cur, total) => `Page ${cur} of ${total}`,
+    removePage: "Remove",
+    noPagesUploaded: "No pages uploaded yet.",
+    saveManga: "Save Manga",
+    updateMangaBtn: "Update Manga",
+    cancel: "Cancel",
+    // Categories
+    addCategory: "Add Category",
+    categoryName: "Category name",
+    noCategories: "No categories yet.",
+    // Genres
+    addGenre: "Add Genre",
+    genreName: "Genre name",
+    noGenres: "No genres yet.",
+    // Settings
+    siteNameLabel: "Site Name",
+    defaultCopyrightLabel: "Default Copyrights",
+    // Reader PDF
+    openPdf: "Open PDF",
+    pdfViewer: "PDF Viewer",
+    pdfPage: "PDF Page",
   },
   bn: {
     siteName: "মাঙ্গা বাংলা",
@@ -396,6 +488,52 @@ export const translations: Record<Lang, Dict> = {
     language: "ভাষা",
     menu: "মেনু",
     close: "বন্ধ",
+    // Admin sidebar
+    dashboard: "ড্যাশবোর্ড",
+    mangaManagement: "মাঙ্গা",
+    categoriesManagement: "ক্যাটাগরি",
+    genresManagement: "জেনার",
+    totalManga: "মোট মাঙ্গা",
+    totalCategories: "ক্যাটাগরি",
+    totalGenres: "জেনার",
+    totalFavorites: "প্রিয়",
+    adminDashboard: "অ্যাডমিন ড্যাশবোর্ড",
+    // Manga management
+    addNewManga: "নতুন মাঙ্গা যোগ করুন",
+    editManga: "মাঙ্গা সম্পাদনা",
+    edit: "সম্পাদনা",
+    mangaList: "মাঙ্গা তালিকা",
+    coverPhoto: "কভার ছবি",
+    bannerPhoto: "ব্যানার ছবি",
+    copyrightLabel: "কপিরাইটস",
+    categoriesLabel: "ক্যাটাগরি",
+    chapterPages: "অধ্যায়ের পৃষ্ঠা",
+    uploadImages: "ছবি আপলোড করুন",
+    uploadPdf: "পিডিএফ আপলোড করুন",
+    uploadPagesHint: "এই অধ্যায়ের জন্য ছবি বা পিডিএফ আপলোড করুন। পাঠকরা ক্রমানুসারে দেখতে পারবেন।",
+    imageMode: "ছবি মোড",
+    pdfMode: "পিডিএফ মোড",
+    pageOf: (cur, total) => `পৃষ্ঠা ${cur} / ${total}`,
+    removePage: "সরান",
+    noPagesUploaded: "এখনো কোনো পৃষ্ঠা আপলোড হয়নি।",
+    saveManga: "মাঙ্গা সংরক্ষণ",
+    updateMangaBtn: "মাঙ্গা আপডেট",
+    cancel: "বাতিল",
+    // Categories
+    addCategory: "ক্যাটাগরি যোগ করুন",
+    categoryName: "ক্যাটাগরির নাম",
+    noCategories: "এখনো কোনো ক্যাটাগরি নেই।",
+    // Genres
+    addGenre: "জেনার যোগ করুন",
+    genreName: "জেনারের নাম",
+    noGenres: "এখনো কোনো জেনার নেই।",
+    // Settings
+    siteNameLabel: "সাইটের নাম",
+    defaultCopyrightLabel: "ডিফল্ট কপিরাইটস",
+    // Reader PDF
+    openPdf: "পিডিএফ খুলুন",
+    pdfViewer: "পিডিএফ ভিউয়ার",
+    pdfPage: "পিডিএফ পৃষ্ঠা",
   },
 };
 

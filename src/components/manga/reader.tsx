@@ -15,6 +15,8 @@ import {
   List,
   ChevronUp,
   ChevronDown,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import { getFullCatalog, formatDate } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
@@ -30,8 +32,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 
-// Generate deterministic placeholder "pages" so the reader looks like a real one.
-function pageImage(mangaId: string, chapterId: string, page: number) {
+// Fallback deterministic page image when no uploaded pages exist.
+function fallbackPageImage(mangaId: string, chapterId: string, page: number) {
   return `https://picsum.photos/seed/${mangaId}-${chapterId}-p${page}/900/1300`;
 }
 
@@ -56,7 +58,21 @@ export function ReaderDialog() {
   const [chaptersOpen, setChaptersOpen] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  const totalPages = chapter?.pages ?? 0;
+  // Pages for this chapter: uploaded (image or PDF) or fallback generated images.
+  const pages = React.useMemo(() => {
+    if (!manga || !chapter) return [];
+    const uploaded = manga.chapterPages?.[chapter.id];
+    if (uploaded && uploaded.length > 0) return uploaded;
+    // Fallback: build N image pages using chapter.pages count
+    return Array.from({ length: chapter.pages }, (_, i) => ({
+      id: `fallback-${i}`,
+      type: "image" as const,
+      src: fallbackPageImage(manga.id, chapter.id, i),
+      name: undefined,
+    }));
+  }, [manga, chapter]);
+
+  const totalPages = pages.length || chapter?.pages || 0;
   const chapterIndex = manga && chapter
     ? manga.chapters.findIndex((c) => c.id === chapter.id)
     : -1;
@@ -127,6 +143,9 @@ export function ReaderDialog() {
       </Dialog>
     );
   }
+
+  const currentPage = pages[page];
+  const isPdf = currentPage?.type === "pdf";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,16 +270,38 @@ export function ReaderDialog() {
         >
           <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center px-2 py-4 sm:px-4">
             <div className="relative w-full overflow-hidden rounded-md border border-border/60 shadow-lg">
-              <img
-                key={`${chapter.id}-${page}`}
-                src={pageImage(manga.id, chapter.id, page)}
-                alt={`${t.page} ${page + 1} ${t.of} ${t.chaptersList} ${chapter.number}`}
-                className="block h-auto w-full"
-                loading="eager"
-              />
+              {isPdf ? (
+                <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
+                  <FileText className="h-16 w-16 text-destructive" />
+                  <div>
+                    <p className="text-sm font-semibold">{t.pdfViewer}</p>
+                    <p className="mt-1 max-w-md text-xs text-muted-foreground" dir="auto">
+                      {currentPage?.name ?? t.pdfPage}
+                    </p>
+                  </div>
+                  <a
+                    href={currentPage?.src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {t.openPdf}
+                  </a>
+                </div>
+              ) : (
+                <img
+                  key={`${chapter.id}-${page}`}
+                  src={currentPage?.src ?? fallbackPageImage(manga.id, chapter.id, page)}
+                  alt={`${t.page} ${page + 1} ${t.of} ${t.chaptersList} ${chapter.number}`}
+                  className="block h-auto w-full"
+                  loading="eager"
+                />
+              )}
               {/* Page watermark */}
               <div className="pointer-events-none absolute right-3 top-3 rounded bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
                 {manga.title} · {t.chaptersList}.{chapter.number} · {t.page}.{page + 1}
+                {isPdf ? " · PDF" : ""}
               </div>
             </div>
 

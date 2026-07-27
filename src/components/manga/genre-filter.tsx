@@ -14,10 +14,15 @@ export function GenreFilter() {
   const toggle = useMangaStore((s) => s.toggleGenre);
   const clear = useMangaStore((s) => s.clearGenres);
   const adminManga = useMangaStore((s) => s.adminManga);
+  const adminGenres = useMangaStore((s) => s.adminGenres);
 
   const genres = React.useMemo(
-    () => getAllGenres(adminManga),
-    [adminManga]
+    () => {
+      const fromManga = getAllGenres(adminManga);
+      // merge admin-managed genres with manga genres
+      return Array.from(new Set([...adminGenres, ...fromManga])).sort();
+    },
+    [adminManga, adminGenres]
   );
 
   return (

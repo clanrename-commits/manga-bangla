@@ -10,23 +10,38 @@ export interface Chapter {
   releasedAt: string; // ISO date
 }
 
+/** A single page of a chapter. Either an image URL OR a PDF data URL. */
+export interface ChapterPage {
+  id: string;
+  type: "image" | "pdf";
+  /** image URL or PDF object URL / data URL */
+  src: string;
+  /** original file name, for display */
+  name?: string;
+}
+
 export interface Manga {
   id: string;
   title: string;
   titleBn?: string;
   author: string;
   artist?: string;
-  cover: string; // image URL
-  banner?: string;
+  /** copyright / rights holder text */
+  copyright?: string;
+  cover: string; // image URL or data URL
+  banner?: string; // image URL or data URL
   status: MangaStatus;
   year: number;
   rating: number; // 0 - 10
   views: number;
   genres: string[];
+  categories: string[]; // dynamic categories
   tags: string[];
   synopsis: string;
   synopsisBn?: string;
   chapters: Chapter[];
+  /** Optional: per-chapter uploaded pages (image or PDF). */
+  chapterPages?: Record<string, ChapterPage[]>;
   featured?: boolean;
   trending?: boolean;
   adminPosted?: boolean;
@@ -83,6 +98,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 9.2,
     views: 4_820_000,
     genres: ["Action", "Fantasy", "Adventure"],
+    categories: ["Manga"],
     tags: ["Samurai", "Revenge", "Cursed Blade"],
     synopsis:
       "When a wandering swordsman inherits a blade forged from a fallen god's soul, he is thrust into a war between forgotten spirits and the empire that hunts them. As the cursed weapon whispers of bloodlines and betrayals, he must decide whether to break the cycle of vengeance or be consumed by it. Each chapter peels back another layer of an ancient pact that has shaped the fate of nations for a thousand years, weaving political intrigue with breathtaking duels on rain-slicked rooftops and across moonlit battlefields.",
@@ -101,6 +117,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.9,
     views: 2_310_000,
     genres: ["Sci-Fi", "Romance", "Drama"],
+    categories: ["Manga"],
     tags: ["Cyberpunk", "AI", "Tokyo 2099"],
     synopsis:
       "In a neon-drowned Tokyo of 2099, a young mechanic repairs broken androids while quietly mourning a sister she could not save. When a mysterious combat unit lands on her workbench with memories that should not exist, she is pulled into a conspiracy that reaches the highest towers of the city. Neon Sakura blends tender romance with sharp cyberpunk thrills, asking what it means to love someone whose code was written to forget you.",
@@ -119,6 +136,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.5,
     views: 1_980_000,
     genres: ["Action", "Supernatural", "School"],
+    categories: ["Manga"],
     tags: ["Werewolves", "Rivalry", "Training Arc"],
     synopsis:
       "Hidden deep in the northern mountains, Iron Fang Academy trains the next generation of werewolf enforcers — children of rival bloodlines forced to share dorms, classrooms, and lethal sparring rings. When a human scholarship student stumbles into their secret world, the academy's careful balance begins to fracture. Friendships are forged in blood, rivalries smolder into romance, and the headmaster's silence hides a debt the school can never repay.",
@@ -136,6 +154,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 9.0,
     views: 760_000,
     genres: ["Fantasy", "Mystery", "Slice of Life"],
+    categories: ["Manga"],
     tags: ["Books", "Magic", "Post-War"],
     synopsis:
       "In a kingdom that burned every book it could find, one librarian travels from village to village with a cart of forbidden volumes, lending them to anyone brave enough to read. Each chapter follows a different borrower and the story that changed their life, threaded together by the librarian's quiet search for a single page that could rewrite the kingdom's past. A tender, melancholy fantasy for anyone who has ever loved a book so much it hurt.",
@@ -153,6 +172,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.7,
     views: 5_410_000,
     genres: ["Sci-Fi", "Action", "Adventure"],
+    categories: ["Manga"],
     tags: ["Space", "Crew", "Heist"],
     synopsis:
       "The crew of the Starlight Renegade steals from galactic corporations and gives to the colonies they were built to silence. When their newest heist uncovers a map to a forgotten colony ship, the crew must outrun bounty hunters, naval armadas, and a traitor in their own ranks. Packed with zero-G set pieces and the warmest found-family banter this side of the spiral arm.",
@@ -170,6 +190,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.4,
     views: 1_120_000,
     genres: ["Slice of Life", "Supernatural", "Drama"],
+    categories: ["Manga"],
     tags: ["Food", "Ghosts", "Healing"],
     synopsis:
       "A tiny midnight diner serves only one dish per customer — the meal that meant the most to them in life. Run by a quiet chef who can see the dead, the kitchen becomes a waypoint for spirits and the living alike, each looking for one last taste of someone they lost. Wholesome, bittersweet, and impossible to read on an empty stomach.",
@@ -186,6 +207,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 9.1,
     views: 6_300_000,
     genres: ["Fantasy", "Action", "Drama"],
+    categories: ["Manga"],
     tags: ["Witches", "War", "Politics"],
     synopsis:
       "Exiled to the eastern marches for refusing a king's order, the iron witch Vasilisa builds a free city out of refugees, deserters, and discarded machines. When the king sends an army to drag her home in chains, she must choose between the peace she built and the war she swore she would never fight again. A sweeping military fantasy with one of the most beloved protagonists of the decade.",
@@ -204,6 +226,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.8,
     views: 2_770_000,
     genres: ["Romance", "Drama", "Slice of Life"],
+    categories: ["Manga"],
     tags: ["Small Town", "First Love", "Coming of Age"],
     synopsis:
       "Two teenagers spend one impossible summer in a town where the fireflies are said to grant a single wish to whoever catches them at midnight. As the season burns down, they learn that some wishes come true only if you are willing to let them go. A modern classic — read it once for the romance and twice for the elegy underneath.",
@@ -220,6 +243,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.6,
     views: 980_000,
     genres: ["Mecha", "Action", "Sci-Fi"],
+    categories: ["Manga"],
     tags: ["Pilots", "Rebellion", "Found Family"],
     synopsis:
       "Sixteen-year-old Iri is the youngest mech pilot in the rebellion, and the only one whose mech refuses to fight without her singing to it. As the war grinds on, she begins to suspect the mech is not a machine at all, but a captured god wearing armor plating like a cage. A dazzling blend of music, mech battles, and quiet, devastating character work.",
@@ -237,6 +261,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.9,
     views: 540_000,
     genres: ["Fantasy", "Mystery", "Adventure"],
+    categories: ["Manga"],
     tags: ["Dreams", "Maps", "Heist"],
     synopsis:
       "A forger who can draw maps of places she has only dreamed of is recruited by a thief to plan the impossible heist of a dream that was stolen from a sleeping emperor. Each chapter is a new map, a new dream, a new city that may or may not exist. Lush, intricate, and impossible to put down.",
@@ -253,6 +278,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.3,
     views: 1_460_000,
     genres: ["Fantasy", "Adventure", "Action"],
+    categories: ["Manga"],
     tags: ["Ocean", "Pirates", "Curses"],
     synopsis:
       "Born with the mark of the drowned god, a young navigator can read the language written in the foam of every wave — but every reading costs her a memory she will never get back. When her crew sails into waters that no chart has ever mapped, she must decide which memories she can bear to lose. Salt-spray adventure with a bittersweet, magical core.",
@@ -269,6 +295,7 @@ export const MANGA_LIST: Manga[] = [
     rating: 8.7,
     views: 3_120_000,
     genres: ["Drama", "Fantasy", "Mystery"],
+    categories: ["Manga"],
     tags: ["Court Intrigue", "Magic", "Betrayal"],
     synopsis:
       "In an empire where every noble's life is recorded in a mirror that cannot lie, the youngest princess discovers that her mirror has been showing someone else's life for the last ten years. As she untangles the conspiracy around her birth, she realizes the empire itself is a reflection of a kingdom that fell centuries ago. Dense, glittering, and razor-sharp.",
@@ -369,4 +396,13 @@ export function getAllGenres(adminManga: Manga[]): string[] {
   return Array.from(
     new Set(getFullCatalog(adminManga).flatMap((m) => m.genres))
   ).sort();
+}
+
+// Get all categories including from admin-posted manga and the admin-managed list.
+export function getAllCategories(
+  adminManga: Manga[],
+  adminCategories: string[]
+): string[] {
+  const fromManga = getFullCatalog(adminManga).flatMap((m) => m.categories);
+  return Array.from(new Set([...adminCategories, ...fromManga])).sort();
 }

@@ -213,6 +213,11 @@ function DetailBody({
             </div>
 
             <div className="flex flex-wrap gap-1.5">
+              {manga.categories.map((c) => (
+                <Badge key={c} variant="secondary" className="bg-primary/10 text-primary">
+                  {c}
+                </Badge>
+              ))}
               {manga.genres.map((g) => (
                 <Badge key={g} variant="secondary">
                   {g}
@@ -224,6 +229,12 @@ function DetailBody({
                 </Badge>
               ))}
             </div>
+
+            {manga.copyright && (
+              <p className="text-xs text-muted-foreground" dir="auto">
+                © {manga.copyright}
+              </p>
+            )}
 
             <Separator />
 
