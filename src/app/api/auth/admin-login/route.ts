@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword } from "@/lib/auth";
+import { verifyPassword, createAdminSession } from "@/lib/auth";
 
 /**
  * POST /api/auth/admin-login
  * Body: { email, password }
- * Returns: { user, adminSecret } — adminSecret is the ADMIN_SECRET env var,
- * which the client uses to authenticate admin API calls.
+ * Returns: { user, adminSecret } — adminSecret is a session token that the
+ * client sends in the x-admin-secret header for admin API calls.
+ *
+ * The session token is stored in the DB (Setting table) and expires after 24h.
+ * This means no ADMIN_SECRET env var is required — the session system works
+ * out of the box after the admin logs in.
  */
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -21,8 +25,12 @@ export async function POST(req: NextRequest) {
   if (!verifyPassword(password, user.passwordHash)) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
+
+  // Create a session token and store it in the DB
+  const sessionToken = await createAdminSession(user.id);
+
   return NextResponse.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
-    adminSecret: process.env.ADMIN_SECRET,
+    adminSecret: sessionToken,
   });
 }

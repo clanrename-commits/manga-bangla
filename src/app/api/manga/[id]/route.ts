@@ -36,7 +36,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { isAdminRequest } = await import("@/lib/auth");
-  if (!isAdminRequest(req)) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
@@ -116,7 +116,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { isAdminRequest } = await import("@/lib/auth");
-  if (!isAdminRequest(req)) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;

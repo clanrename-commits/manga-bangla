@@ -10,7 +10,7 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const { isAdminRequest } = await import("@/lib/auth");
-  if (!isAdminRequest(req)) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();
