@@ -55,6 +55,7 @@ server.log
 
 # Sandbox-specific scripts and downloads
 /zscripts/
+/.zscripts/
 /download/
 /upload/
 /scripts/
@@ -62,4 +63,5 @@ server.log
 /examples/
 /mini-services/
 /prisma/*.db
+*.db
 *.db-journal
