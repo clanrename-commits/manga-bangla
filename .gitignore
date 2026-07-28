@@ -31,7 +31,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env*.local
 
 # vercel
 .vercel
@@ -53,15 +55,18 @@ server.log
 # Skills directory
 /skills/
 
-# Sandbox-specific scripts and downloads
+# Sandbox-specific downloads (not source code)
 /zscripts/
 /.zscripts/
 /download/
 /upload/
-/scripts/
 /tests/
 /examples/
 /mini-services/
+
+# Database files
 /prisma/*.db
 *.db
-*.db-journal.env.local
+*.db-journal
+
+# Keep scripts/ tracked — it contains db setup scripts needed for deployment
