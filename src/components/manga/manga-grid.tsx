@@ -3,17 +3,13 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { SearchX, HeartCrack, Flame, Sparkles } from "lucide-react";
-import {
-  getFullCatalog,
-  getMangaTitle,
-  type Manga,
-} from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
 import { MangaCard } from "./manga-card";
 import { GenreFilter } from "./genre-filter";
 import { Hero } from "./hero";
 import { Button } from "@/components/ui/button";
+import type { Manga } from "@/lib/manga-data";
 
 function filterManga(opts: {
   search: string;
@@ -50,29 +46,24 @@ export function MangaExplorer() {
   const search = useMangaStore((s) => s.search);
   const selectedGenres = useMangaStore((s) => s.selectedGenres);
   const favorites = useMangaStore((s) => s.favorites);
-  const adminManga = useMangaStore((s) => s.adminManga);
+  const catalog = useMangaStore((s) => s.catalog);
   const setView = useMangaStore((s) => s.setView);
 
   const showHero = view === "browse" && !search && selectedGenres.length === 0;
 
-  const fullCatalog = React.useMemo(
-    () => getFullCatalog(adminManga),
-    [adminManga]
-  );
-
-  let scope = fullCatalog;
+  let scope = catalog;
   let title = t.browseManga;
   let subtitle = t.browseSubtitle;
 
   if (view === "favorites") {
-    scope = fullCatalog.filter((m) => favorites.includes(m.id));
+    scope = catalog.filter((m) => favorites.includes(m.id));
     title = t.yourFavorites;
     subtitle =
       favorites.length === 0
         ? t.favoritesEmpty
         : t.favoritesCount(scope.length);
   } else if (view === "trending") {
-    scope = fullCatalog.filter((m) => m.trending);
+    scope = catalog.filter((m) => m.trending);
     title = t.trendingNow;
     subtitle = t.trendingSubtitle;
   }

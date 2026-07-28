@@ -41,8 +41,57 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { Manga, MangaStatus, ChapterPage } from "@/lib/manga-data";
 import { useRouter } from "next/navigation";
+import {
+  fetchManga,
+  createManga,
+  updateManga,
+  deleteManga,
+  fetchCategories,
+  createCategory,
+  deleteCategory,
+  fetchGenres,
+  createGenre,
+  deleteGenre,
+  fetchSettings,
+  updateSettings,
+} from "@/lib/api-client";
 
 type AdminTab = "dashboard" | "manga" | "categories" | "genres" | "settings";
+
+// Convert the Prisma-shaped manga object returned by the API into the
+// Manga interface used throughout the UI.
+function normalizeApiManga(m: any): Manga {
+  return {
+    id: m.id,
+    title: m.title,
+    titleBn: m.titleBn ?? undefined,
+    author: m.author,
+    artist: m.artist ?? undefined,
+    copyright: m.copyright ?? undefined,
+    cover: m.cover,
+    banner: m.banner ?? undefined,
+    status: m.status,
+    year: m.year,
+    rating: m.rating,
+    views: m.views,
+    genres: (m.genres ?? []).map((g: any) => g.name),
+    categories: (m.categories ?? []).map((c: any) => c.name),
+    tags: [],
+    synopsis: m.synopsis,
+    synopsisBn: m.synopsisBn ?? undefined,
+    chapters: (m.chapters ?? []).map((c: any) => ({
+      id: c.id,
+      number: c.number,
+      title: c.title,
+      pages: c.pagesCount,
+      releasedAt: c.releasedAt,
+    })),
+    chapterPages: undefined,
+    featured: m.featured,
+    trending: m.trending,
+    adminPosted: m.adminPosted,
+  };
+}
 
 export function AdminPage() {
   const t = useT();
@@ -247,13 +296,13 @@ function AdminContent({
 /* ---------- Dashboard ---------- */
 function DashboardTab() {
   const t = useT();
-  const adminManga = useMangaStore((s) => s.adminManga);
+  const catalog = useMangaStore((s) => s.catalog);
   const adminCategories = useMangaStore((s) => s.adminCategories);
   const adminGenres = useMangaStore((s) => s.adminGenres);
   const favorites = useMangaStore((s) => s.favorites);
 
   const stats = [
-    { label: t.totalManga, value: adminManga.length, icon: BookOpen },
+    { label: t.totalManga, value: catalog.length, icon: BookOpen },
     { label: t.totalCategories, value: adminCategories.length, icon: FolderTree },
     { label: t.totalGenres, value: adminGenres.length, icon: Tags },
     { label: t.totalFavorites, value: favorites.length, icon: Star },
@@ -310,15 +359,29 @@ function MangaListTab({
 }) {
   const t = useT();
   const lang = useMangaStore((s) => s.lang);
-  const adminManga = useMangaStore((s) => s.adminManga);
-  const deleteManga = useMangaStore((s) => s.deleteManga);
+  const catalog = useMangaStore((s) => s.catalog);
+  const setCatalog = useMangaStore((s) => s.setCatalog);
+  const [deleting, setDeleting] = React.useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    try {
+      await deleteManga(id);
+      setCatalog(catalog.filter((m) => m.id !== id));
+      toast.success(t.mangaDeleted);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-2xl font-bold">{t.mangaManagement}</h3>
-          <p className="text-sm text-muted-foreground">{t.mangaList} ({adminManga.length})</p>
+          <p className="text-sm text-muted-foreground">{t.mangaList} ({catalog.length})</p>
         </div>
         <Button onClick={onAdd} className="gap-1.5">
           <Plus className="h-4 w-4" />
@@ -326,7 +389,7 @@ function MangaListTab({
         </Button>
       </div>
 
-      {adminManga.length === 0 ? (
+      {catalog.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
           <BookOpen className="h-12 w-12 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{t.noPostedManga}</p>
@@ -337,7 +400,7 @@ function MangaListTab({
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {adminManga.map((m) => (
+          {catalog.map((m) => (
             <li
               key={m.id}
               className="flex items-center gap-3 rounded-lg border border-border/60 bg-card p-3"
@@ -382,10 +445,8 @@ function MangaListTab({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => {
-                    deleteManga(m.id);
-                    toast.success(t.mangaDeleted);
-                  }}
+                  onClick={() => handleDelete(m.id)}
+                  disabled={deleting === m.id}
                   aria-label={t.delete}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -408,14 +469,13 @@ function MangaForm({
   onClose: () => void;
 }) {
   const t = useT();
-  const adminManga = useMangaStore((s) => s.adminManga);
+  const catalog = useMangaStore((s) => s.catalog);
+  const setCatalog = useMangaStore((s) => s.setCatalog);
   const adminGenres = useMangaStore((s) => s.adminGenres);
   const adminCategories = useMangaStore((s) => s.adminCategories);
-  const postManga = useMangaStore((s) => s.postManga);
-  const updateManga = useMangaStore((s) => s.updateManga);
 
   const isEdit = editingId !== "__new__";
-  const existing = isEdit ? adminManga.find((m) => m.id === editingId) : undefined;
+  const existing = isEdit ? catalog.find((m) => m.id === editingId) : undefined;
 
   const [title, setTitle] = React.useState(existing?.title ?? "");
   const [titleBn, setTitleBn] = React.useState(existing?.titleBn ?? "");
@@ -574,56 +634,48 @@ function MangaForm({
     setSaving(true);
 
     try {
-      const now = Date.now();
-      const chapterArr = chaptersList.map((c, idx) => {
-        const existingCh = existing?.chapters.find((x) => x.id === c.id);
-        return (
-          existingCh ?? {
-            id: c.id,
-            number: c.number,
-            title: `Chapter ${c.number}`,
-            pages: chapterPagesMap[c.id]?.length ?? 12,
-            releasedAt: new Date(now - idx * 7 * 86400000).toISOString(),
-          }
-        );
-      });
-
-      const id = isEdit ? existing!.id : `admin-${now}`;
-      const manga: Manga = {
-        id,
+      // Build payload for the API
+      const payload = {
         title: title.trim(),
-        titleBn: titleBn.trim() || undefined,
+        titleBn: titleBn.trim() || null,
         author: author.trim(),
-        copyright: copyright.trim() || undefined,
-        cover: cover.trim() || `https://picsum.photos/seed/${id}/600/900`,
-        banner: banner.trim() || `https://picsum.photos/seed/${id}-ban/1600/700`,
+        artist: null,
+        copyright: copyright.trim() || null,
+        cover: cover.trim() || `https://picsum.photos/seed/${encodeURIComponent(title)}/600/900`,
+        banner: banner.trim() || `https://picsum.photos/seed/${encodeURIComponent(title)}-ban/1600/700`,
         status,
         year: parseInt(year) || new Date().getFullYear(),
-        rating: existing?.rating ?? 8 + Math.random() * 1.5,
-        views: existing?.views ?? Math.floor(Math.random() * 500_000) + 10_000,
-        genres: selGenres.length > 0 ? selGenres : ["Action"],
-        categories: selCats.length > 0 ? selCats : ["Manga"],
-        tags: existing?.tags ?? [],
         synopsis: synopsis.trim() || title.trim(),
-        synopsisBn: synopsisBn.trim() || undefined,
-        chapters: chapterArr,
-        chapterPages: chapterPagesMap,
+        synopsisBn: synopsisBn.trim() || null,
+        categories: selCats.length > 0 ? selCats : ["Manga"],
+        genres: selGenres.length > 0 ? selGenres : ["Action"],
         featured,
         trending,
-        adminPosted: true,
+        chaptersCount: numChapters,
+        chapterPages: Object.fromEntries(
+          Object.entries(chapterPagesMap).map(([k, v]) => [
+            k,
+            v.map((p) => ({ type: p.type, src: p.src, name: p.name })),
+          ])
+        ),
       };
 
+      let result;
       if (isEdit) {
-        updateManga(id, manga);
-        toast.success(t.mangaPosted);
+        result = await updateManga(existing!.id, payload);
+        // Update local catalog
+        const updatedManga = normalizeApiManga(result.manga);
+        setCatalog(catalog.map((m) => (m.id === updatedManga.id ? updatedManga : m)));
       } else {
-        postManga(manga);
-        toast.success(t.mangaPosted);
+        result = await createManga(payload);
+        const newManga = normalizeApiManga(result.manga);
+        setCatalog([newManga, ...catalog]);
       }
+      toast.success(t.mangaPosted);
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error("Failed to save manga — storage may be full");
+      toast.error(err instanceof Error ? err.message : "Failed to save manga");
     } finally {
       setSaving(false);
     }
@@ -1022,16 +1074,34 @@ function MangaForm({
 function CategoriesTab() {
   const t = useT();
   const adminCategories = useMangaStore((s) => s.adminCategories);
-  const addCategory = useMangaStore((s) => s.addCategory);
-  const deleteCategory = useMangaStore((s) => s.deleteCategory);
+  const setAdminCategories = useMangaStore((s) => s.setAdminCategories);
   const [name, setName] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addCategory(name);
-    setName("");
-    toast.success(t.settingsSaved);
+    setLoading(true);
+    try {
+      await createCategory(name);
+      setAdminCategories([...adminCategories, name.trim()].sort());
+      setName("");
+      toast.success(t.settingsSaved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (cat: string) => {
+    try {
+      await deleteCategory(cat);
+      setAdminCategories(adminCategories.filter((c) => c !== cat));
+      toast.success(t.mangaDeleted);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   };
 
   return (
@@ -1047,8 +1117,9 @@ function CategoriesTab() {
           placeholder={t.categoryName}
           dir="auto"
           className="max-w-xs"
+          disabled={loading}
         />
-        <Button type="submit" className="gap-1.5">
+        <Button type="submit" className="gap-1.5" disabled={loading}>
           <Plus className="h-4 w-4" />
           {t.addCategory}
         </Button>
@@ -1065,10 +1136,7 @@ function CategoriesTab() {
               <FolderTree className="h-3.5 w-3.5 text-primary" />
               <span>{c}</span>
               <button
-                onClick={() => {
-                  deleteCategory(c);
-                  toast.success(t.mangaDeleted);
-                }}
+                onClick={() => handleDelete(c)}
                 className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                 aria-label={t.delete}
               >
@@ -1086,16 +1154,34 @@ function CategoriesTab() {
 function GenresTab() {
   const t = useT();
   const adminGenres = useMangaStore((s) => s.adminGenres);
-  const addGenre = useMangaStore((s) => s.addGenre);
-  const deleteGenre = useMangaStore((s) => s.deleteGenre);
+  const setAdminGenres = useMangaStore((s) => s.setAdminGenres);
   const [name, setName] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addGenre(name);
-    setName("");
-    toast.success(t.settingsSaved);
+    setLoading(true);
+    try {
+      await createGenre(name);
+      setAdminGenres([...adminGenres, name.trim()].sort());
+      setName("");
+      toast.success(t.settingsSaved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (g: string) => {
+    try {
+      await deleteGenre(g);
+      setAdminGenres(adminGenres.filter((x) => x !== g));
+      toast.success(t.mangaDeleted);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   };
 
   return (
@@ -1111,8 +1197,9 @@ function GenresTab() {
           placeholder={t.genreName}
           dir="auto"
           className="max-w-xs"
+          disabled={loading}
         />
-        <Button type="submit" className="gap-1.5">
+        <Button type="submit" className="gap-1.5" disabled={loading}>
           <Plus className="h-4 w-4" />
           {t.addGenre}
         </Button>
@@ -1129,10 +1216,7 @@ function GenresTab() {
               <Tags className="h-3.5 w-3.5 text-primary" />
               <span>{g}</span>
               <button
-                onClick={() => {
-                  deleteGenre(g);
-                  toast.success(t.mangaDeleted);
-                }}
+                onClick={() => handleDelete(g)}
                 className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                 aria-label={t.delete}
               >
@@ -1150,15 +1234,14 @@ function GenresTab() {
 function SettingsTab() {
   const t = useT();
   const facebookUrl = useMangaStore((s) => s.facebookUrl);
-  const setFacebookUrl = useMangaStore((s) => s.setFacebookUrl);
   const siteName = useMangaStore((s) => s.siteName);
-  const setSiteName = useMangaStore((s) => s.setSiteName);
   const defaultCopyright = useMangaStore((s) => s.defaultCopyright);
-  const setDefaultCopyright = useMangaStore((s) => s.setDefaultCopyright);
+  const setSettings = useMangaStore((s) => s.setSettings);
 
   const [fb, setFb] = React.useState(facebookUrl);
   const [sn, setSn] = React.useState(siteName);
   const [cp, setCp] = React.useState(defaultCopyright);
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     setFb(facebookUrl);
@@ -1166,12 +1249,26 @@ function SettingsTab() {
     setCp(defaultCopyright);
   }, [facebookUrl, siteName, defaultCopyright]);
 
-  const save = (e: React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFacebookUrl(fb.trim());
-    setSiteName(sn.trim());
-    setDefaultCopyright(cp.trim());
-    toast.success(t.settingsSaved);
+    setSaving(true);
+    try {
+      await updateSettings({
+        siteName: sn.trim(),
+        facebookUrl: fb.trim(),
+        defaultCopyright: cp.trim(),
+      });
+      setSettings({
+        siteName: sn.trim(),
+        facebookUrl: fb.trim(),
+        defaultCopyright: cp.trim(),
+      });
+      toast.success(t.settingsSaved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -1190,6 +1287,7 @@ function SettingsTab() {
             id="set-sitename"
             value={sn}
             onChange={(e) => setSn(e.target.value)}
+            disabled={saving}
           />
         </div>
         <div className="space-y-2">
@@ -1202,6 +1300,7 @@ function SettingsTab() {
             value={cp}
             onChange={(e) => setCp(e.target.value)}
             placeholder="© 2026 Manga Bangla"
+            disabled={saving}
           />
         </div>
         <div className="space-y-2">
@@ -1215,11 +1314,12 @@ function SettingsTab() {
             onChange={(e) => setFb(e.target.value)}
             placeholder="https://facebook.com/mangabangla"
             type="url"
+            disabled={saving}
           />
         </div>
-        <Button type="submit" className="gap-1.5">
+        <Button type="submit" className="gap-1.5" disabled={saving}>
           <Save className="h-4 w-4" />
-          {t.saveSettings}
+          {saving ? "..." : t.saveSettings}
         </Button>
       </form>
     </div>

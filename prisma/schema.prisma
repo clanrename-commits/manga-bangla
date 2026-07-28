@@ -1,11 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for Manga Bangla — Turso (libsql) backend
+// Learn more: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -13,20 +11,116 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================
+//  Authentication & users
+// ============================================================
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("user") // "user" | "admin"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  favorites Favorites[]
 }
 
-model Post {
+// ============================================================
+//  Catalog: categories, genres, manga, chapters, pages
+// ============================================================
+
+model Category {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  name      String   @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  manga Manga[]
+}
+
+model Genre {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  manga Manga[]
+}
+
+model Manga {
+  id           String   @id @default(cuid())
+  title        String
+  titleBn      String?
+  author       String
+  artist       String?
+  copyright    String?
+  cover        String
+  banner       String?
+  status       String   @default("Ongoing") // Ongoing | Completed | Hiatus
+  year         Int      @default(2026)
+  rating       Float    @default(8.5)
+  views        Int      @default(0)
+  synopsis     String
+  synopsisBn   String?
+  featured     Boolean  @default(true)
+  trending     Boolean  @default(true)
+  adminPosted  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  categories Category[]
+  genres     Genre[]
+  chapters   Chapter[]
+  favorites  Favorites[]
+}
+
+model Chapter {
+  id         String   @id @default(cuid())
+  mangaId    String
+  number     Int
+  title      String
+  pagesCount Int      @default(12)
+  releasedAt DateTime @default(now())
+
+  manga  Manga   @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  pages  ChapterPage[]
+
+  @@unique([mangaId, number])
+}
+
+model ChapterPage {
+  id         String @id @default(cuid())
+  chapterId  String
+  seq        Int    // order within the chapter (0-based)
+  type       String // "image" | "pdf"
+  src        String // image URL / data URL / PDF URL
+  name       String?
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, seq])
+}
+
+// ============================================================
+//  User favorites
+// ============================================================
+
+model Favorites {
+  id      String @id @default(cuid())
+  userId  String
+  mangaId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manga Manga @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mangaId])
+}
+
+// ============================================================
+//  Site settings (key-value)
+// ============================================================
+
+model Setting {
+  id    String @id
+  value String
 }

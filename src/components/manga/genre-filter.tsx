@@ -6,24 +6,20 @@ import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getAllGenres } from "@/lib/manga-data";
 
 export function GenreFilter() {
   const t = useT();
   const selected = useMangaStore((s) => s.selectedGenres);
   const toggle = useMangaStore((s) => s.toggleGenre);
   const clear = useMangaStore((s) => s.clearGenres);
-  const adminManga = useMangaStore((s) => s.adminManga);
+  const catalog = useMangaStore((s) => s.catalog);
   const adminGenres = useMangaStore((s) => s.adminGenres);
 
-  const genres = React.useMemo(
-    () => {
-      const fromManga = getAllGenres(adminManga);
-      // merge admin-managed genres with manga genres
-      return Array.from(new Set([...adminGenres, ...fromManga])).sort();
-    },
-    [adminManga, adminGenres]
-  );
+  // Merge admin-managed genres with genres from existing manga
+  const genres = React.useMemo(() => {
+    const fromManga = catalog.flatMap((m) => m.genres);
+    return Array.from(new Set([...adminGenres, ...fromManga])).sort();
+  }, [catalog, adminGenres]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">

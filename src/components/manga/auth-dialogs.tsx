@@ -24,7 +24,11 @@ import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import {
+  loginUser,
+  registerUser,
+  adminLogin,
+} from "@/lib/api-client";
 
 export function AuthDialogs() {
   const dialog = useMangaStore((s) => s.authDialog);
@@ -43,23 +47,28 @@ export function AuthDialogs() {
 
 function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
-  const login = useMangaStore((s) => s.login);
+  const setCurrentUser = useMangaStore((s) => s.setCurrentUser);
   const setDialog = useMangaStore((s) => s.setAuthDialog);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const res = login(email, password);
-    if (res.ok) {
+    setLoading(true);
+    try {
+      const data = await loginUser(email, password);
+      setCurrentUser(data.user);
       toast.success(t.loginSuccess);
       setEmail("");
       setPassword("");
       onClose();
-    } else {
-      setError(res.error === "invalidCredentials" ? t.invalidCredentials : res.error ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.invalidCredentials);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,6 +96,7 @@ function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) 
                 className="pl-9"
                 required
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
           </div>
@@ -103,6 +113,7 @@ function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) 
                 className="pl-9"
                 required
                 autoComplete="current-password"
+                disabled={loading}
               />
             </div>
           </div>
@@ -111,9 +122,9 @@ function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) 
               {error}
             </p>
           )}
-          <Button type="submit" className="w-full gap-2">
+          <Button type="submit" className="w-full gap-2" disabled={loading}>
             <LogIn className="h-4 w-4" />
-            {t.login}
+            {loading ? "..." : t.login}
           </Button>
           <div className="flex items-center justify-between text-sm">
             <button
@@ -140,29 +151,34 @@ function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) 
 
 function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
-  const register = useMangaStore((s) => s.register);
+  const setCurrentUser = useMangaStore((s) => s.setCurrentUser);
   const setDialog = useMangaStore((s) => s.setAuthDialog);
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (password.length < 4) {
       setError(t.requiredField);
       return;
     }
-    const res = register(name, email, password);
-    if (res.ok) {
+    setLoading(true);
+    try {
+      const data = await registerUser(name, email, password);
+      setCurrentUser(data.user);
       toast.success(t.registerSuccess);
       setName("");
       setEmail("");
       setPassword("");
       onClose();
-    } else {
-      setError(res.error === "emailExists" ? t.emailExists : res.error ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.emailExists);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,6 +204,7 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
                 placeholder="Your name"
                 className="pl-9"
                 required
+                disabled={loading}
               />
             </div>
           </div>
@@ -204,6 +221,7 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
                 className="pl-9"
                 required
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
           </div>
@@ -220,6 +238,7 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
                 className="pl-9"
                 required
                 autoComplete="new-password"
+                disabled={loading}
               />
             </div>
           </div>
@@ -228,9 +247,9 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
               {error}
             </p>
           )}
-          <Button type="submit" className="w-full gap-2">
+          <Button type="submit" className="w-full gap-2" disabled={loading}>
             <UserPlus className="h-4 w-4" />
-            {t.register}
+            {loading ? "..." : t.register}
           </Button>
           <div className="text-center text-sm">
             <button
@@ -255,31 +274,30 @@ function AdminLoginDialog({
   onClose: () => void;
 }) {
   const t = useT();
-  const login = useMangaStore((s) => s.login);
+  const setCurrentUser = useMangaStore((s) => s.setCurrentUser);
   const setDialog = useMangaStore((s) => s.setAuthDialog);
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const res = login(email, password);
-    if (res.ok) {
-      const user = useMangaStore.getState().currentUser;
-      if (user?.role !== "admin") {
-        setError(t.adminOnly);
-        useMangaStore.getState().logout();
-        return;
-      }
+    setLoading(true);
+    try {
+      const data = await adminLogin(email, password);
+      setCurrentUser(data.user);
       toast.success(t.loginSuccess);
       setEmail("");
       setPassword("");
       onClose();
       router.push("/admin");
-    } else {
-      setError(res.error === "invalidCredentials" ? t.invalidCredentials : res.error ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.invalidCredentials);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -307,6 +325,7 @@ function AdminLoginDialog({
                 className="pl-9"
                 required
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
           </div>
@@ -323,6 +342,7 @@ function AdminLoginDialog({
                 className="pl-9"
                 required
                 autoComplete="current-password"
+                disabled={loading}
               />
             </div>
           </div>
@@ -338,9 +358,9 @@ function AdminLoginDialog({
             </div>
             <p className="mt-1">admin@mangabangla.com / admin123</p>
           </div>
-          <Button type="submit" className="w-full gap-2">
+          <Button type="submit" className="w-full gap-2" disabled={loading}>
             <Shield className="h-4 w-4" />
-            {t.adminLogin}
+            {loading ? "..." : t.adminLogin}
           </Button>
           <div className="text-center text-sm">
             <button

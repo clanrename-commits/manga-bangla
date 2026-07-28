@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+"use client";
+
+import * as React from "react";
 import { Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/manga/theme-provider";
+import { useAppData } from "@/hooks/use-app-data";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,22 +25,13 @@ const notoBengali = Noto_Sans_Bengali({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Manga Bangla — First Manga in Bangla",
-  description:
-    "Manga Bangla — প্রথম বাংলা মাঙ্গা প্ল্যাটফর্ম। Discover, read, and collect your favorite manga in Bangla and English. A modern reader with a curated catalog and built-in chapter reader.",
-  keywords: [
-    "manga bangla",
-    "bangla manga",
-    "manga",
-    "bengali manga",
-    "মাঙ্গা বাংলা",
-    "online manga",
-    "manga reader",
-    "comics",
-  ],
-  authors: [{ name: "Abdur Rahman Akash" }],
-};
+function AppDataLoader({ children }: { children: React.ReactNode }) {
+  // Hydrate the Zustand store with server data on mount.
+  // The `loaded` flag lets us show a loader if needed, but we render
+  // children immediately so the page chrome is visible while data loads.
+  useAppData();
+  return <>{children}</>;
+}
 
 export default function RootLayout({
   children,
@@ -56,7 +50,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
+          <AppDataLoader>{children}</AppDataLoader>
           <Toaster />
           <SonnerToaster position="bottom-right" richColors />
         </ThemeProvider>

@@ -65,7 +65,7 @@ export function Header() {
   const setSearch = useMangaStore((s) => s.setSearch);
   const favorites = useMangaStore((s) => s.favorites);
   const currentUser = useMangaStore((s) => s.currentUser);
-  const logout = useMangaStore((s) => s.logout);
+  const setCurrentUser = useMangaStore((s) => s.setCurrentUser);
   const setAuthDialog = useMangaStore((s) => s.setAuthDialog);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -75,7 +75,11 @@ export function Header() {
   const isAdmin = currentUser?.role === "admin";
 
   const handleLogout = () => {
-    logout();
+    setCurrentUser(null);
+    // Clear admin secret from localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("manga-bangla-admin-secret");
+    }
     toast.success(t.logoutSuccess);
   };
 

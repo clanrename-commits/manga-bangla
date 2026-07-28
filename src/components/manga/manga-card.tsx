@@ -12,6 +12,7 @@ import {
 } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
+import { toggleFavorite } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 interface MangaCardProps {
@@ -25,10 +26,20 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
   const openManga = useMangaStore((s) => s.openManga);
   const openReader = useMangaStore((s) => s.openReader);
   const favorites = useMangaStore((s) => s.favorites);
-  const toggleFavorite = useMangaStore((s) => s.toggleFavorite);
+  const toggleFavoriteLocal = useMangaStore((s) => s.toggleFavoriteLocal);
   const isFav = favorites.includes(manga.id);
 
-  const latest = manga.chapters[0];
+  const latest = manga.chapters[manga.chapters.length - 1];
+
+  const handleFav = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavoriteLocal(manga.id);
+    try {
+      await toggleFavorite(manga.id);
+    } catch {
+      toggleFavoriteLocal(manga.id);
+    }
+  };
 
   return (
     <motion.article
@@ -67,10 +78,7 @@ export function MangaCard({ manga, index = 0 }: MangaCardProps) {
 
         {/* Favorite button */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleFavorite(manga.id);
-          }}
+          onClick={handleFav}
           aria-label={isFav ? t.removedFromFavorites : t.addToFavorites}
           aria-pressed={isFav}
           className={cn(

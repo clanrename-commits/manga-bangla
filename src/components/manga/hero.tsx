@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, Star, Eye, Play, Plus, Check, Sparkles } fro
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  MANGA_LIST,
   formatViews,
   getMangaTitle,
   getMangaSynopsis,
@@ -14,6 +13,7 @@ import {
 } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
+import { toggleFavorite } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 export function Hero() {
@@ -21,17 +21,13 @@ export function Hero() {
   const [paused, setPaused] = React.useState(false);
   const t = useT();
   const lang = useMangaStore((s) => s.lang);
-  const adminManga = useMangaStore((s) => s.adminManga);
+  const catalog = useMangaStore((s) => s.catalog);
   const openManga = useMangaStore((s) => s.openManga);
   const openReader = useMangaStore((s) => s.openReader);
 
-  const fullCatalog = React.useMemo(
-    () => [...adminManga, ...MANGA_LIST],
-    [adminManga]
-  );
   const featured = React.useMemo(
-    () => fullCatalog.filter((m) => m.featured).slice(0, 4),
-    [fullCatalog]
+    () => catalog.filter((m) => m.featured).slice(0, 4),
+    [catalog]
   );
 
   const next = React.useCallback(
@@ -213,14 +209,26 @@ export function Hero() {
 function FavoriteButton({ manga }: { manga: Manga }) {
   const t = useT();
   const favorites = useMangaStore((s) => s.favorites);
-  const toggle = useMangaStore((s) => s.toggleFavorite);
+  const toggleFavoriteLocal = useMangaStore((s) => s.toggleFavoriteLocal);
   const isFav = favorites.includes(manga.id);
+
+  const handleClick = async () => {
+    // Optimistic update
+    toggleFavoriteLocal(manga.id);
+    try {
+      await toggleFavorite(manga.id);
+    } catch {
+      // Revert on failure
+      toggleFavoriteLocal(manga.id);
+    }
+  };
+
   return (
     <Button
       size="lg"
       variant="outline"
       className="gap-2"
-      onClick={() => toggle(manga.id)}
+      onClick={handleClick}
       aria-pressed={isFav}
     >
       {isFav ? (

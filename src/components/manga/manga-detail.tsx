@@ -26,7 +26,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  getFullCatalog,
   formatViews,
   formatDate,
   getMangaTitle,
@@ -36,6 +35,7 @@ import {
 } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
+import { toggleFavorite } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export function MangaDetailDialog() {
@@ -44,13 +44,9 @@ export function MangaDetailDialog() {
   const openManga = useMangaStore((s) => s.openManga);
   const openReader = useMangaStore((s) => s.openReader);
   const favorites = useMangaStore((s) => s.favorites);
-  const toggleFavorite = useMangaStore((s) => s.toggleFavorite);
-  const adminManga = useMangaStore((s) => s.adminManga);
+  const toggleFavoriteLocal = useMangaStore((s) => s.toggleFavoriteLocal);
+  const catalog = useMangaStore((s) => s.catalog);
 
-  const catalog = React.useMemo(
-    () => getFullCatalog(adminManga),
-    [adminManga]
-  );
   const manga = catalog.find((m) => m.id === openMangaId) ?? null;
   const open = Boolean(manga);
 
@@ -68,12 +64,13 @@ export function MangaDetailDialog() {
           <DetailBody
             manga={manga}
             isFav={favorites.includes(manga.id)}
-            onToggleFav={() => {
-              const wasFav = favorites.includes(manga.id);
-              toggleFavorite(manga.id);
-              toast.success(
-                wasFav ? t.removedFromFavorites : t.addedToFavorites
-              );
+            onToggleFav={async () => {
+              toggleFavoriteLocal(manga.id);
+              try {
+                await toggleFavorite(manga.id);
+              } catch {
+                toggleFavoriteLocal(manga.id);
+              }
             }}
             onReadChapter={(ch) => {
               openReader(manga.id, ch.id);

@@ -64,4 +64,4 @@ server.log
 /mini-services/
 /prisma/*.db
 *.db
-*.db-journal
+*.db-journal.env.local

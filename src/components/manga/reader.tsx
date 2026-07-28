@@ -18,9 +18,10 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
-import { getFullCatalog, formatDate } from "@/lib/manga-data";
+import { formatDate } from "@/lib/manga-data";
 import { useMangaStore } from "@/store/manga-store";
 import { useT } from "@/lib/i18n";
+import { fetchMangaById } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -42,12 +43,7 @@ export function ReaderDialog() {
   const readerMangaId = useMangaStore((s) => s.readerMangaId);
   const readerChapterId = useMangaStore((s) => s.readerChapterId);
   const openReader = useMangaStore((s) => s.openReader);
-  const adminManga = useMangaStore((s) => s.adminManga);
-
-  const catalog = React.useMemo(
-    () => getFullCatalog(adminManga),
-    [adminManga]
-  );
+  const catalog = useMangaStore((s) => s.catalog);
 
   const manga = catalog.find((m) => m.id === readerMangaId) ?? null;
   const chapter =
@@ -56,13 +52,45 @@ export function ReaderDialog() {
   const open = Boolean(manga && chapter);
   const [page, setPage] = React.useState(0);
   const [chaptersOpen, setChaptersOpen] = React.useState(false);
+  const [uploadedPages, setUploadedPages] = React.useState<
+    { id: string; type: "image" | "pdf"; src: string; name?: string }[]
+  >([]);
+  const [pagesLoaded, setPagesLoaded] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch chapter pages on demand from the API
+  React.useEffect(() => {
+    if (!manga || !chapter) {
+      setUploadedPages([]);
+      setPagesLoaded(false);
+      return;
+    }
+    setPagesLoaded(false);
+    setUploadedPages([]);
+    fetchMangaById(manga.id)
+      .then((data) => {
+        const ch = data.manga?.chapters?.find((c: any) => c.id === chapter.id);
+        if (ch?.pages && ch.pages.length > 0) {
+          setUploadedPages(
+            ch.pages.map((p: any) => ({
+              id: p.id,
+              type: p.type,
+              src: p.src,
+              name: p.name ?? undefined,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        /* fallback to generated pages */
+      })
+      .finally(() => setPagesLoaded(true));
+  }, [manga, chapter]);
 
   // Pages for this chapter: uploaded (image or PDF) or fallback generated images.
   const pages = React.useMemo(() => {
     if (!manga || !chapter) return [];
-    const uploaded = manga.chapterPages?.[chapter.id];
-    if (uploaded && uploaded.length > 0) return uploaded;
+    if (uploadedPages.length > 0) return uploadedPages;
     // Fallback: build N image pages using chapter.pages count
     return Array.from({ length: chapter.pages }, (_, i) => ({
       id: `fallback-${i}`,
@@ -70,7 +98,7 @@ export function ReaderDialog() {
       src: fallbackPageImage(manga.id, chapter.id, i),
       name: undefined,
     }));
-  }, [manga, chapter]);
+  }, [manga, chapter, uploadedPages]);
 
   const totalPages = pages.length || chapter?.pages || 0;
   const chapterIndex = manga && chapter
